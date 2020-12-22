@@ -17,6 +17,8 @@ from ..proposal_generator import build_proposal_generator
 from ..roi_heads import build_roi_heads
 from .build import META_ARCH_REGISTRY
 
+from pdb import set_trace
+
 __all__ = ["GeneralizedRCNN", "ProposalNetwork"]
 
 
@@ -145,7 +147,8 @@ class GeneralizedRCNN(nn.Module):
                 The :class:`Instances` object has the following keys:
                 "pred_boxes", "pred_classes", "scores", "pred_masks", "pred_keypoints"
         """
-        print("In forward in rcnn.py")
+        # print("In forward in rcnn.py")
+        set_trace()
         if not self.training:
             return self.inference(batched_inputs)
 
