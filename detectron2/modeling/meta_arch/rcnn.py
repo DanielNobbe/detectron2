@@ -147,9 +147,8 @@ class GeneralizedRCNN(nn.Module):
                 The :class:`Instances` object has the following keys:
                 "pred_boxes", "pred_classes", "scores", "pred_masks", "pred_keypoints"
         """
-        # print("In forward in rcnn.py")
-        # set_trace()
-        return
+        
+        set_trace()
         if not self.training:
             return self.inference(batched_inputs)
 
