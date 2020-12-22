@@ -148,7 +148,8 @@ class GeneralizedRCNN(nn.Module):
                 "pred_boxes", "pred_classes", "scores", "pred_masks", "pred_keypoints"
         """
         # print("In forward in rcnn.py")
-        set_trace()
+        # set_trace()
+        return
         if not self.training:
             return self.inference(batched_inputs)
 
