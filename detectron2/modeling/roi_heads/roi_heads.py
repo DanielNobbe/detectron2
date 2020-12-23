@@ -890,7 +890,7 @@ class OodgROIHeads(StandardROIHeads):
         NOTE: this interface is experimental. Not sure that this is what I should be using then..
         Andrei also used it though, so should be okay.
         """
-        super(OodgROIHeads).__init__(*args, **kwargs)
+        super(OodgROIHeads, self).__init__(*args, **kwargs)
 
     @classmethod
     def from_config(cls, cfg, input_shape):
