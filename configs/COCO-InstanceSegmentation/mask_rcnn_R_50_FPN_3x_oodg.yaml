@@ -2,5 +2,5 @@ _BASE_: mask_rcnn_R_50_FPN_3x.yaml
 
 MODEL:
   META_ARCHITECTURE: "OoDGGeneralizedRCNN"
-ROI_HEADS:
-    NAME: "OodgROIHeads"
+  ROI_HEADS:
+      NAME: "OodgROIHeads"
