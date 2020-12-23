@@ -22,6 +22,8 @@ from .fast_rcnn import FastRCNNOutputLayers
 from .keypoint_head import build_keypoint_head
 from .mask_head import build_mask_head
 
+from pdb import set_trace
+
 ROI_HEADS_REGISTRY = Registry("ROI_HEADS")
 ROI_HEADS_REGISTRY.__doc__ = """
 Registry for ROI heads in a generalized R-CNN model.
@@ -901,4 +903,42 @@ class OodgROIHeads(StandardROIHeads):
             ret.update(cls._init_keypoint_head(cfg, input_shape))
         return ret
     
-    
+    @classmethod
+    def _init_box_head(cls, cfg, input_shape):
+        # D: this is one of the methods used for initialisation from cfg files, which is what we want
+        # fmt: off
+        in_features       = cfg.MODEL.ROI_HEADS.IN_FEATURES
+        pooler_resolution = cfg.MODEL.ROI_BOX_HEAD.POOLER_RESOLUTION
+        pooler_scales     = tuple(1.0 / input_shape[k].stride for k in in_features)
+        sampling_ratio    = cfg.MODEL.ROI_BOX_HEAD.POOLER_SAMPLING_RATIO
+        pooler_type       = cfg.MODEL.ROI_BOX_HEAD.POOLER_TYPE
+        # fmt: on
+
+        # If StandardROIHeads is applied on multiple feature maps (as in FPN),
+        # then we share the same predictors and therefore the channel counts must be the same
+        in_channels = [input_shape[f].channels for f in in_features]
+        # Check all channel counts are equal
+        assert len(set(in_channels)) == 1, in_channels
+        in_channels = in_channels[0]
+
+        box_pooler = ROIPooler(
+            output_size=pooler_resolution,
+            scales=pooler_scales,
+            sampling_ratio=sampling_ratio,
+            pooler_type=pooler_type,
+        )
+        # Here we split "box head" and "box predictor", which is mainly due to historical reasons.
+        # They are used together so the "box predictor" layers should be part of the "box head".
+        # New subclasses of ROIHeads do not need "box predictor"s.
+        box_head = build_box_head(
+            cfg, ShapeSpec(channels=in_channels, height=pooler_resolution, width=pooler_resolution)
+        )
+        set_trace()
+        box_predictor = FastRCNNOutputLayers(cfg, box_head.output_shape) # D: Modifying this line should do the trick
+        # D: and then we should modify the forward fn as well
+        return {
+            "box_in_features": in_features,
+            "box_pooler": box_pooler,
+            "box_head": box_head,
+            "box_predictor": box_predictor,
+        }
