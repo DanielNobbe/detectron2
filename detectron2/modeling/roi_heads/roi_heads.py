@@ -791,12 +791,12 @@ class StandardROIHeads(ROIHeads):
             In training, a dict of losses.
             In inference, a list of `Instances`, the predicted instances.
         """
-        features = [features[f] for f in self.box_in_features]
+        features = [features[f] for f in self.box_in_features] # D: This creates a list of feature tensors per feature map
         box_features = self.box_pooler(features, [x.proposal_boxes for x in proposals])
         box_features = self.box_head(box_features)
         predictions = self.box_predictor(box_features)
         del box_features
-
+        set_trace()
         if self.training:
             losses = self.box_predictor.losses(predictions, proposals)
             # proposals is modified in-place below, so losses must be computed first.
