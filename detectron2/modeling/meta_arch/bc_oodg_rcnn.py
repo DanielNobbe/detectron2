@@ -73,7 +73,7 @@ class OoDGGeneralizedRCNN(GeneralizedRCNN):
             set_trace()
         else:
             oodg_dataset_numbers = None
-
+        set_trace()
         _, detector_losses = self.roi_heads(images, features, proposals, gt_instances, oodg_dataset_numbers) # Add the numbers here?
 
 
