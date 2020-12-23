@@ -367,6 +367,7 @@ class FastRCNNOutputs:
 
 
 class FastRCNNOutputLayers(nn.Module):
+
     """
     Two linear layers for predicting Fast R-CNN outputs:
 
@@ -598,3 +599,11 @@ class FastRCNNOutputLayers(nn.Module):
         num_inst_per_image = [len(p) for p in proposals]
         probs = F.softmax(scores, dim=-1)
         return probs.split(num_inst_per_image, dim=0)
+
+class OodgFastRCNNOutputLayers(FastRCNNOutputLayers):
+    """
+    For now, implement Oodg loss in a new class. Can add a cfg entry later,
+    then we can use if-else logic in FastRCNNOutputLayers to use Oodg loss.
+    Not nessecary to override the initialisation here, only the loss.
+    """
+
