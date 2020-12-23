@@ -48,7 +48,7 @@ class OoDGGeneralizedRCNN(GeneralizedRCNN):
                 "pred_boxes", "pred_classes", "scores", "pred_masks", "pred_keypoints"
         """
         
-        set_trace()
+        # set_trace()
         if not self.training:
             return self.inference(batched_inputs)
 
@@ -70,12 +70,10 @@ class OoDGGeneralizedRCNN(GeneralizedRCNN):
         if "oodg_dataset_number" in batched_inputs[0]:
             oodg_dataset_numbers = [x["oodg_dataset_number"] for x in batched_inputs]
             print("OoDG Dataset numbers: ", oodg_dataset_numbers)
-            set_trace()
         else:
             oodg_dataset_numbers = None
 
         _, detector_losses = self.roi_heads(images, features, proposals, gt_instances, oodg_dataset_numbers) # Add the numbers here?
-
 
         if self.vis_period > 0:
             storage = get_event_storage()
