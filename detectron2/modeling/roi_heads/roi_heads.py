@@ -886,6 +886,10 @@ class OodgROIHeads(StandardROIHeads):
     def __init__(self, *args, **kwargs): # D: Keep this general to prevent breaking anything. 
         # Probably only the kwargs argument would be enough though
         # Included this since class needs its own @configurable call to use a new from_config function
+        """
+        NOTE: this interface is experimental. Not sure that this is what I should be using then..
+        Andrei also used it though, so should be okay.
+        """
         super(OodgROIHeads).__init__(*args, **kwargs)
 
     @classmethod
