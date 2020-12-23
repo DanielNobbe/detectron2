@@ -589,6 +589,9 @@ class StandardROIHeads(ROIHeads):
 
     @classmethod
     def from_config(cls, cfg, input_shape):
+        #D: this is the base function that is called when a model is defined from a config file,
+        # which is what we need to modify.
+
         ret = super().from_config(cfg)
         ret["train_on_pred_boxes"] = cfg.MODEL.ROI_BOX_HEAD.TRAIN_ON_PRED_BOXES
         # Subclasses that have not been updated to use from_config style construction
@@ -606,6 +609,7 @@ class StandardROIHeads(ROIHeads):
 
     @classmethod
     def _init_box_head(cls, cfg, input_shape):
+        # D: this is one of the methods used for initialisation from cfg files, which is what we want
         # fmt: off
         in_features       = cfg.MODEL.ROI_HEADS.IN_FEATURES
         pooler_resolution = cfg.MODEL.ROI_BOX_HEAD.POOLER_RESOLUTION
@@ -633,7 +637,8 @@ class StandardROIHeads(ROIHeads):
         box_head = build_box_head(
             cfg, ShapeSpec(channels=in_channels, height=pooler_resolution, width=pooler_resolution)
         )
-        box_predictor = FastRCNNOutputLayers(cfg, box_head.output_shape)
+        box_predictor = FastRCNNOutputLayers(cfg, box_head.output_shape) # D: Modifying this line should do the trick
+        # D: and then we should modify the forward fn as well
         return {
             "box_in_features": in_features,
             "box_pooler": box_pooler,
@@ -872,3 +877,28 @@ class StandardROIHeads(ROIHeads):
         else:
             features = dict([(f, features[f]) for f in self.keypoint_in_features])
         return self.keypoint_head(features, instances)
+
+@ROI_HEADS_REGISTRY.register()
+class OodgROIHeads(StandardROIHeads):
+    @classmethod
+    def from_config(cls, cfg, input_shape):
+        #D: this is the base function that is called when a model is defined from a config file,
+        # which is what we need to modify.
+        # D: not modified this function, probably not necessary
+
+        ret = super(StandardROIHeads, cls).from_config(cfg) # D: Linter says this is wrong, I don't think so
+        ret["train_on_pred_boxes"] = cfg.MODEL.ROI_BOX_HEAD.TRAIN_ON_PRED_BOXES
+        # Subclasses that have not been updated to use from_config style construction
+        # may have overridden _init_*_head methods. In this case, those overridden methods
+        # will not be classmethods and we need to avoid trying to call them here.
+        # We test for this with ismethod which only returns True for bound methods of cls.
+        # Such subclasses will need to handle calling their overridden _init_*_head methods.
+        if inspect.ismethod(cls._init_box_head):
+            ret.update(cls._init_box_head(cfg, input_shape))
+        if inspect.ismethod(cls._init_mask_head):
+            ret.update(cls._init_mask_head(cfg, input_shape))
+        if inspect.ismethod(cls._init_keypoint_head):
+            ret.update(cls._init_keypoint_head(cfg, input_shape))
+        return ret
+    
+    
