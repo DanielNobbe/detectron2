@@ -592,7 +592,7 @@ class StandardROIHeads(ROIHeads):
     @classmethod
     def from_config(cls, cfg, input_shape):
         #D: this is the base function that is called when a model is defined from a config file,
-        # which is what we need to modify.
+        # which is what we need to modify. It should return a dict of arguments to pass to the init function
 
         ret = super().from_config(cfg)
         ret["train_on_pred_boxes"] = cfg.MODEL.ROI_BOX_HEAD.TRAIN_ON_PRED_BOXES
@@ -882,13 +882,20 @@ class StandardROIHeads(ROIHeads):
 
 @ROI_HEADS_REGISTRY.register()
 class OodgROIHeads(StandardROIHeads):
+    @configurable
+    def __init__(self, *args, **kwargs): # D: Keep this general to prevent breaking anything. 
+        # Probably only the kwargs argument would be enough though
+        # Included this since class needs its own @configurable call to use a new from_config function
+        super(OodgROIHeads).__init__(*args, **kwargs)
+
     @classmethod
     def from_config(cls, cfg, input_shape):
         #D: this is the base function that is called when a model is defined from a config file,
         # which is what we need to modify.
-        # D: not modified this function, probably not necessary
+        # D: not modified this function, probably not necessary.
+        # This function returns a dict of arguments to pass to the init function
 
-        ret = super(StandardROIHeads, cls).from_config(cfg) # D: Linter says this is wrong, I don't think so
+        ret = super(StandardROIHeads, cls).from_config(cfg) # D: Linter says this is wrong, but it works
         ret["train_on_pred_boxes"] = cfg.MODEL.ROI_BOX_HEAD.TRAIN_ON_PRED_BOXES
         # Subclasses that have not been updated to use from_config style construction
         # may have overridden _init_*_head methods. In this case, those overridden methods
@@ -933,7 +940,7 @@ class OodgROIHeads(StandardROIHeads):
         box_head = build_box_head(
             cfg, ShapeSpec(channels=in_channels, height=pooler_resolution, width=pooler_resolution)
         )
-        set_trace()
+        # set_trace()
         box_predictor = FastRCNNOutputLayers(cfg, box_head.output_shape) # D: Modifying this line should do the trick
         # D: and then we should modify the forward fn as well
         return {
