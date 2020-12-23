@@ -76,8 +76,8 @@ class OoDGGeneralizedRCNN(GeneralizedRCNN):
         else:
             oodg_dataset_numbers = None
         # set_trace()
-        _, detector_losses = self.roi_heads(images, features, proposals, gt_instances, oodg_dataset_numbers) # Add the numbers here?
-
+        # _, detector_losses = self.roi_heads(images, features, proposals, gt_instances, oodg_dataset_numbers) # Add the numbers here?
+         _, detector_losses = self.roi_heads(images, features, proposals, gt_instances)
 
         if self.vis_period > 0:
             storage = get_event_storage()
