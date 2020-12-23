@@ -60,7 +60,7 @@ class OoDGGeneralizedRCNN(GeneralizedRCNN):
             gt_instances = None
 
         features = self.backbone(images.tensor)
-
+        print("Features size: ", features.shape)
         if self.proposal_generator is not None:
             proposals, proposal_losses = self.proposal_generator(images, features, gt_instances)
         else:
