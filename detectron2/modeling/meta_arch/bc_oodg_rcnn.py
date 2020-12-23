@@ -60,7 +60,7 @@ class OoDGGeneralizedRCNN(GeneralizedRCNN):
             gt_instances = None
 
         features = self.backbone(images.tensor)
-        set_trace()
+        # set_trace()
         # print("Features size: ", features.shape)
         if self.proposal_generator is not None:
             proposals, proposal_losses = self.proposal_generator(images, features, gt_instances)
@@ -75,7 +75,7 @@ class OoDGGeneralizedRCNN(GeneralizedRCNN):
             # set_trace()
         else:
             oodg_dataset_numbers = None
-        # set_trace()
+        set_trace()
         _, detector_losses = self.roi_heads(images, features, proposals, gt_instances, oodg_dataset_numbers) # Add the numbers here?
 
 
