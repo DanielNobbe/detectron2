@@ -64,8 +64,7 @@ def _fmt_box_list(box_tensor, batch_index: int):
     repeated_index = torch.full_like(
         box_tensor[:, :1], batch_index, dtype=box_tensor.dtype, device=box_tensor.device
     )
-    set_trace()
-    return cat((repeated_index, box_tensor), dim=1)
+    return cat((repeated_index, box_tensor), dim=1) # D: returns a tensor with the batch index in the first column
 
 
 def convert_boxes_to_pooler_format(box_lists: List[Boxes]):
@@ -94,7 +93,7 @@ def convert_boxes_to_pooler_format(box_lists: List[Boxes]):
     pooler_fmt_boxes = cat(
         [_fmt_box_list(box_list.tensor, i) for i, box_list in enumerate(box_lists)], dim=0
     )
-
+    set_trace()
     return pooler_fmt_boxes
 
 
