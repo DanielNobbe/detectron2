@@ -365,6 +365,31 @@ class FastRCNNOutputs:
             boxes, scores, image_shapes, score_thresh, nms_thresh, topk_per_image
         )
 
+class OodgFastRCNNOutputs(FastRCNNOutputs):
+    def __init__(
+        self,
+        box2box_transform,
+        pred_class_logits,
+        pred_proposal_deltas,
+        proposals,
+        batch_indices,
+        smooth_l1_beta=0.0,
+        box_reg_loss_type="smooth_l1",
+    ):
+
+    super(OodgFastRCNNOutputs, self).__init__(
+                                box2box_transform,
+                                pred_class_logits,
+                                pred_proposal_deltas,
+                                proposals,
+                                smooth_l1_beta=0.0,
+                                box_reg_loss_type="smooth_l1",
+                            )
+    self.batch_indices = batch_indices
+
+    def losses(self):
+        print("In Oodg losses method")
+
 
 class FastRCNNOutputLayers(nn.Module):
 
@@ -605,5 +630,28 @@ class OodgFastRCNNOutputLayers(FastRCNNOutputLayers):
     For now, implement Oodg loss in a new class. Can add a cfg entry later,
     then we can use if-else logic in FastRCNNOutputLayers to use Oodg loss.
     Not nessecary to override the initialisation here, only the loss.
+    We only implement the special loss here, so it wouldn't hurt to disable the masking
     """
+    def losses(self, predictions, proposals, batch_indices):
+        """
+        Args:
+            predictions: return values of :meth:`forward()`.
+            proposals (list[Instances]): proposals that match the features that were used
+                to compute predictions. The fields ``proposal_boxes``, ``gt_boxes``,
+                ``gt_classes`` are expected.
+
+        Returns:
+            Dict[str, Tensor]: dict of losses
+        """
+        scores, proposal_deltas = predictions
+        losses = OodgFastRCNNOutputs(
+            self.box2box_transform,
+            scores,
+            proposal_deltas,
+            proposals,
+            self.smooth_l1_beta,
+            self.box_reg_loss_type,
+        ).losses()
+        return {k: v * self.loss_weight.get(k, 1.0) for k, v in losses.items()}
+
 
