@@ -389,6 +389,8 @@ class OodgFastRCNNOutputs(FastRCNNOutputs):
 
     def losses(self):
         print("In Oodg losses method")
+        return {"loss_cls": self.softmax_cross_entropy_loss(), "loss_box_reg": self.box_reg_loss()}
+
 
 
 class FastRCNNOutputLayers(nn.Module):
