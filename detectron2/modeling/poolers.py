@@ -8,6 +8,8 @@ from torchvision.ops import RoIPool
 from detectron2.layers import ROIAlign, ROIAlignRotated, cat, nonzero_tuple
 from detectron2.structures import Boxes
 
+from pdb import set_trace
+
 """
 To export ROIPooler to torchscript, in this file, variables that should be annotated with
 `Union[List[Boxes], List[RotatedBoxes]]` are only annotated with `List[Boxes]`.
@@ -62,6 +64,7 @@ def _fmt_box_list(box_tensor, batch_index: int):
     repeated_index = torch.full_like(
         box_tensor[:, :1], batch_index, dtype=box_tensor.dtype, device=box_tensor.device
     )
+    set_trace()
     return cat((repeated_index, box_tensor), dim=1)
 
 
