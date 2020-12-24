@@ -93,8 +93,7 @@ def convert_boxes_to_pooler_format(box_lists: List[Boxes]):
     pooler_fmt_boxes = cat(
         [_fmt_box_list(box_list.tensor, i) for i, box_list in enumerate(box_lists)], dim=0
     )
-    set_trace()
-    return pooler_fmt_boxes
+    return pooler_fmt_boxes # This is a 2D tensor with the batch index in the first column for each box
 
 
 class ROIPooler(nn.Module):
@@ -225,7 +224,7 @@ class ROIPooler(nn.Module):
                 (0, x[0].shape[1]) + self.output_size, device=x[0].device, dtype=x[0].dtype
             )
 
-        pooler_fmt_boxes = convert_boxes_to_pooler_format(box_lists)
+        pooler_fmt_boxes = convert_boxes_to_pooler_format(box_lists) # This is a 2D tensor with the batch index in the first column for each box
 
         if num_level_assignments == 1:
             return self.level_poolers[0](x[0], pooler_fmt_boxes)
@@ -246,6 +245,6 @@ class ROIPooler(nn.Module):
         for level, pooler in enumerate(self.level_poolers):
             inds = nonzero_tuple(level_assignments == level)[0]
             pooler_fmt_boxes_level = pooler_fmt_boxes[inds]
-            output[inds] = pooler(x[level], pooler_fmt_boxes_level)
-
+            output[inds] = pooler(x[level], pooler_fmt_boxes_level) # D: This returns the cropped feature maps per box.
+        # D: to make this work for us, we can return the first column of the pooler_fmt_boxes tensor
         return output
