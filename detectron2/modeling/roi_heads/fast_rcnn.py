@@ -377,7 +377,7 @@ class OodgFastRCNNOutputs(FastRCNNOutputs):
         box_reg_loss_type="smooth_l1",
     ):
 
-    super(OodgFastRCNNOutputs, self).__init__(
+        super(OodgFastRCNNOutputs, self).__init__(
                                 box2box_transform,
                                 pred_class_logits,
                                 pred_proposal_deltas,
@@ -385,7 +385,7 @@ class OodgFastRCNNOutputs(FastRCNNOutputs):
                                 smooth_l1_beta=0.0,
                                 box_reg_loss_type="smooth_l1",
                             )
-    self.batch_indices = batch_indices
+        self.batch_indices = batch_indices
 
     def losses(self):
         print("In Oodg losses method")
