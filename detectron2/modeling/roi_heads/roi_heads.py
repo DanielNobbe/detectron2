@@ -923,7 +923,7 @@ class OodgROIHeads(StandardROIHeads):
         images: ImageList,
         features: Dict[str, torch.Tensor],
         proposals: List[Instances],
-        oodg_dataset_number: List,
+        oodg_dataset_numbers: List,
         targets: Optional[List[Instances]] = None,
     ) -> Tuple[List[Instances], Dict[str, torch.Tensor]]: # D: This last bit is the return types
         """
