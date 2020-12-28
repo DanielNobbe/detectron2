@@ -18,7 +18,7 @@ TODO: Correct these annotations when torchscript support `Union`.
 https://github.com/pytorch/pytorch/issues/41412
 """
 
-__all__ = ["ROIPooler"]
+__all__ = ["ROIPooler", "OodgROIPooler"]
 
 
 def assign_boxes_to_levels(
@@ -310,4 +310,4 @@ class OodgROIPooler(ROIPooler):
             pooler_fmt_boxes_level = pooler_fmt_boxes[inds]
             output[inds] = pooler(x[level], pooler_fmt_boxes_level) # D: This returns the cropped feature maps per box.
         # D: to make this work for us, we can return the first column of the pooler_fmt_boxes tensor
-        return output, pooler_fmt_boxes[:, 0] # This is the only difference with ROIPooler, we could also use an if-statement
+        return output, pooler_fmt_boxes[:, 0].int() # This is the only difference with ROIPooler, we could also use an if-statement
