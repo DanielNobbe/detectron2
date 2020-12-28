@@ -1065,7 +1065,7 @@ class OodgROIHeads(StandardROIHeads):
         # D: are they all separate tensors though? Or one big tensor?
         # set_trace()
         # D: box_features is a 4D tensor. (M, C, output_size, output_size) - M is the total number of maps
-        box_features = self.box_head(box_features)
+        box_features = self.box_head(box_features) 
         # D: box_features is now a 2D tensor (M, F), with a vector per map.
         predictions = self.box_predictor(box_features)
         # D: Predictions is a tuple of scores, bbox_deltas, where scores is a tensor of (M, K+1) (K object classes, 1 background class)
