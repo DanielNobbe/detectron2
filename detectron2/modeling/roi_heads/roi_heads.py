@@ -918,6 +918,37 @@ class OodgROIHeads(StandardROIHeads):
             ret.update(cls._init_keypoint_head(cfg, input_shape))
         return ret
     
+    def forward(
+        self,
+        images: ImageList,
+        features: Dict[str, torch.Tensor],
+        proposals: List[Instances],
+        oodg_dataset_number: List,
+        targets: Optional[List[Instances]] = None,
+    ) -> Tuple[List[Instances], Dict[str, torch.Tensor]]: # D: This last bit is the return types
+        """
+        See :class:`ROIHeads.forward`.
+        """
+        del images
+        if self.training:
+            assert targets, "'targets' argument is required during training"
+            proposals = self.label_and_sample_proposals(proposals, targets)
+        del targets
+
+        if self.training:
+            losses = self._forward_box(features, proposals, oodg_dataset_numbers)
+            # Usually the original proposals used by the box head are used by the mask, keypoint
+            # heads. But when `self.train_on_pred_boxes is True`, proposals will contain boxes
+            # predicted by the box head.
+            losses.update(self._forward_mask(features, proposals))
+            losses.update(self._forward_keypoint(features, proposals))
+            return proposals, losses
+        else:
+            pred_instances = self._forward_box(features, proposals)
+            # During inference cascaded prediction is used: the mask and keypoints heads are only
+            # applied to the top scoring box detections.
+            pred_instances = self.forward_with_given_boxes(features, pred_instances)
+            return pred_instances, {}
     # @classmethod
     # def _init_box_head(cls, cfg, input_shape):
     #     # D: this is one of the methods used for initialisation from cfg files, which is what we want
@@ -1000,7 +1031,8 @@ class OodgROIHeads(StandardROIHeads):
             "box_predictor": box_predictor,
         }
 
-    def _forward_box(self, features: Dict[str, torch.Tensor], proposals: List[Instances]):
+    def _forward_box(self, features: Dict[str, torch.Tensor], proposals: List[Instances],
+                    oodg_dataset_numbers: List):
         """
         Forward logic of the box prediction branch. If `self.train_on_pred_boxes is True`,
             the function puts predicted boxes in the `proposal_boxes` field of `proposals` argument.
@@ -1012,6 +1044,10 @@ class OodgROIHeads(StandardROIHeads):
                 their matching ground truth.
                 Each has fields "proposal_boxes", and "objectness_logits",
                 "gt_classes", "gt_boxes".
+            oodg_dataset_numbers: List: The dataset number each image belongs to, based on
+            batch index. The dataset number of batch image 0 can be found at 
+            oodg_dataset_numbers[0].
+
 
         Returns:
             In training, a dict of losses.
@@ -1019,6 +1055,9 @@ class OodgROIHeads(StandardROIHeads):
         """
         features = [features[f] for f in self.box_in_features] # D: This creates a list of feature tensors per feature map
         box_features, batch_indices = self.box_pooler(features, [x.proposal_boxes for x in proposals]) 
+        prop_dataset_numbers = [oodg_dataset_numbers[batch_index] for batch_index in batch_indices]
+        # Dataset number per proposal
+
         #D: we can return an extra list of batch indixes for each feature map that comes out here
         # D: are they all separate tensors though? Or one big tensor?
         # set_trace()
@@ -1030,7 +1069,7 @@ class OodgROIHeads(StandardROIHeads):
         # D: bbox_deltas is a tensor of (M, 4K)
         del box_features
         if self.training:
-            losses = self.box_predictor.losses(predictions, proposals, batch_indices)
+            losses = self.box_predictor.losses(predictions, proposals, prop_dataset_numbers)
             # proposals is modified in-place below, so losses must be computed first.
             if self.train_on_pred_boxes:
                 with torch.no_grad():

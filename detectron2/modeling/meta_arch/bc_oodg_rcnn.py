@@ -73,8 +73,12 @@ class OoDGGeneralizedRCNN(GeneralizedRCNN):
             print("OoDG Dataset numbers: ", oodg_dataset_numbers)
         else:
             oodg_dataset_numbers = None
-
-        _, detector_losses = self.roi_heads(images, features, proposals, gt_instances, oodg_dataset_numbers) # Add the numbers here?
+        # set_trace()
+        if cfg.ROI_HEADS.NAME == "OodgROIHeads":
+            _, detector_losses = self.roi_heads(images, features, proposals, gt_instances, oodg_dataset_numbers=oodg_dataset_numbers) # Add the numbers here?
+        else:
+            raise ValueError, "Must use OodgROIHeads with OoDGGeneralizedRCNN"
+        # _, detector_losses = self.roi_heads(images, features, proposals, gt_instances)
 
         if self.vis_period > 0:
             storage = get_event_storage()
