@@ -388,8 +388,6 @@ class OodgFastRCNNOutputs(FastRCNNOutputs):
         self.prop_dataset_numbers = prop_dataset_numbers
 
     def losses(self):
-        print("In Oodg losses method")
-        print(self.pred_class_logits)
         return {"loss_cls": self.softmax_cross_entropy_loss(), "loss_box_reg": self.box_reg_loss()}
 
 

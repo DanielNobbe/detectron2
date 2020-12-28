@@ -53,15 +53,12 @@ class OoDGGeneralizedRCNN(GeneralizedRCNN):
             return self.inference(batched_inputs)
 
         images = self.preprocess_image(batched_inputs)
-        print("Imagelist size: ", images.tensor.shape)
         if "instances" in batched_inputs[0]:
             gt_instances = [x["instances"].to(self.device) for x in batched_inputs]
         else:
             gt_instances = None
 
         features = self.backbone(images.tensor)
-        # set_trace()
-        # print("Features size: ", features.shape)
         if self.proposal_generator is not None:
             proposals, proposal_losses = self.proposal_generator(images, features, gt_instances)
         else:
