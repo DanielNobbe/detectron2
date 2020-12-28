@@ -1058,8 +1058,6 @@ class OodgROIHeads(StandardROIHeads):
         """
         features = [features[f] for f in self.box_in_features] # D: This creates a list of feature tensors per feature map
         box_features, batch_indices = self.box_pooler(features, [x.proposal_boxes for x in proposals]) 
-        print(batch_indices)
-        set_trace()
         prop_dataset_numbers = [oodg_dataset_numbers[batch_index] for batch_index in batch_indices]
         # Dataset number per proposal
 
