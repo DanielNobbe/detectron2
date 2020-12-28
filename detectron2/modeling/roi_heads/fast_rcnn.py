@@ -372,7 +372,7 @@ class OodgFastRCNNOutputs(FastRCNNOutputs):
         pred_class_logits,
         pred_proposal_deltas,
         proposals,
-        batch_indices,
+        prop_dataset_numbers,
         smooth_l1_beta=0.0,
         box_reg_loss_type="smooth_l1",
     ):
@@ -385,7 +385,7 @@ class OodgFastRCNNOutputs(FastRCNNOutputs):
                                 smooth_l1_beta=0.0,
                                 box_reg_loss_type="smooth_l1",
                             )
-        self.batch_indices = batch_indices
+        self.prop_dataset_numbers = prop_dataset_numbers
 
     def losses(self):
         print("In Oodg losses method")
@@ -634,13 +634,15 @@ class OodgFastRCNNOutputLayers(FastRCNNOutputLayers):
     Not nessecary to override the initialisation here, only the loss.
     We only implement the special loss here, so it wouldn't hurt to disable the masking
     """
-    def losses(self, predictions, proposals, batch_indices):
+    def losses(self, predictions, proposals, prop_dataset_numbers):
         """
         Args:
             predictions: return values of :meth:`forward()`.
             proposals (list[Instances]): proposals that match the features that were used
                 to compute predictions. The fields ``proposal_boxes``, ``gt_boxes``,
                 ``gt_classes`` are expected.
+            prop_dataset_numbers (list[Instances]): list of OoDG dataset numbers 
+            each proposal belongs to. 
 
         Returns:
             Dict[str, Tensor]: dict of losses
@@ -651,6 +653,7 @@ class OodgFastRCNNOutputLayers(FastRCNNOutputLayers):
             scores,
             proposal_deltas,
             proposals,
+            prop_dataset_numbers,
             self.smooth_l1_beta,
             self.box_reg_loss_type,
         ).losses()
