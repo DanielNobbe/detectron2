@@ -74,7 +74,7 @@ class OoDGGeneralizedRCNN(GeneralizedRCNN):
         else:
             oodg_dataset_numbers = None
         # set_trace()
-        if cfg.ROI_HEADS.NAME == "OodgROIHeads":
+        if type(self.roi_heads).__name__ == "OodgROIHeads":
             _, detector_losses = self.roi_heads(images, features, proposals, gt_instances, oodg_dataset_numbers=oodg_dataset_numbers) # Add the numbers here?
         else:
             raise ValueError("Must use OodgROIHeads with OoDGGeneralizedRCNN")
