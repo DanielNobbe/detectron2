@@ -609,6 +609,16 @@ class OodgRPN(RPN):
 
         # Log the number of positive/negative anchors per-image that's used in training
         pos_mask = gt_labels == 1
+
+        # First, multiply the pos_mask with the oodg value of each row/image
+        # Then, we apply the mask again to this, to get a flattened version
+        # Then, we have a 1D tensor that indicates the oodg value for each
+        # anchor. Same as for the roi head.
+
+        oodg_mask = torch.tensor(oodg_dataset_numbers).view(-1,1) * pos_mask
+        anchor_dataset_numbers = oodg_mask[pos_mask]
+        print("Test - anchor dataset numbers: ", anchor_dataset_numbers)
+
         num_pos_anchors = pos_mask.sum().item()
         num_neg_anchors = (gt_labels == 0).sum().item()
         storage = get_event_storage()
@@ -635,6 +645,13 @@ class OodgRPN(RPN):
         # pos_mask is only 1 where it is positive
         # we could apply the pos_mask to a tensor containing oodg_dataset_numbers
         # but that's not very efficient. 
+
+        # Ok so each image has the exact same amount of anchors and gt
+        # labels. They have differing amounts of positive ones though.
+        # We can count the number of positive ones per image
+        # through pos_mask.sum(dim=1)
+        # Then, probably the first image comes first, etc
+        # Checked, this is correct
 
 
         # elif self.box_reg_loss_type == "giou":
