@@ -514,7 +514,7 @@ class OodgRPN(RPN):
 
     @classmethod
     def from_config(cls, cfg, input_shape: Dict[str, ShapeSpec]):
-        return super(OodgRPN, self).from_config(cfg, input_shape)
+        return super(OodgRPN, cls).from_config(cfg, input_shape)
         # For some reason super from config does not work
         # Makes sense to not use it tho
         # Let's just copy it
