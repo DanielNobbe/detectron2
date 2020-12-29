@@ -68,11 +68,8 @@ class OoDGGeneralizedRCNN(GeneralizedRCNN):
 
         if "oodg_dataset_number" in batched_inputs[0]:
             oodg_dataset_numbers = [x["oodg_dataset_number"] for x in batched_inputs]
-            print("OoDG Dataset numbers: ", oodg_dataset_numbers)
-            # set_trace()
         else:
             oodg_dataset_numbers = None
-        # set_trace()
         if type(self.roi_heads).__name__ == "OodgROIHeads":
             _, detector_losses = self.roi_heads(images, features, proposals, oodg_dataset_numbers,
                 gt_instances) # Add the numbers here?
