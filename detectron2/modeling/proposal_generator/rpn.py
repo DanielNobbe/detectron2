@@ -515,4 +515,4 @@ class OodgRPN(nn.Module):
     @classmethod
     def from_config(cls, cfg, input_shape: Dict[str, ShapeSpec]):
         # Not sure if this will work, but hope so
-        super(OodgRPN).from_config(cls, cfg, input_shape)
+        super().from_config(cls, cfg, input_shape)
