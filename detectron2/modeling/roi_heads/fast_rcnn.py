@@ -12,7 +12,10 @@ from detectron2.modeling.box_regression import Box2BoxTransform
 from detectron2.structures import Boxes, Instances
 from detectron2.utils.events import get_event_storage
 
-__all__ = ["fast_rcnn_inference", "FastRCNNOutputLayers"]
+from .oodg_fast_rcnn_losses import OodgFastRCNNOutputs
+
+__all__ = ["fast_rcnn_inference", "FastRCNNOutputLayers", 
+            "OodgFastRCNNOutputLayers"]
 
 
 logger = logging.getLogger(__name__)
@@ -365,30 +368,7 @@ class FastRCNNOutputs:
             boxes, scores, image_shapes, score_thresh, nms_thresh, topk_per_image
         )
 
-class OodgFastRCNNOutputs(FastRCNNOutputs):
-    def __init__(
-        self,
-        box2box_transform,
-        pred_class_logits,
-        pred_proposal_deltas,
-        proposals,
-        prop_dataset_numbers,
-        smooth_l1_beta=0.0,
-        box_reg_loss_type="smooth_l1",
-    ):
 
-        super(OodgFastRCNNOutputs, self).__init__(
-                                box2box_transform,
-                                pred_class_logits,
-                                pred_proposal_deltas,
-                                proposals,
-                                smooth_l1_beta=0.0,
-                                box_reg_loss_type="smooth_l1",
-                            )
-        self.prop_dataset_numbers = prop_dataset_numbers
-
-    def losses(self):
-        return {"loss_cls": self.softmax_cross_entropy_loss(), "loss_box_reg": self.box_reg_loss()}
 
 
 
