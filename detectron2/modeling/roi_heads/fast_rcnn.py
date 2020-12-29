@@ -15,7 +15,7 @@ from detectron2.utils.events import get_event_storage
 from .oodg_fast_rcnn_losses import OodgFastRCNNOutputs
 
 __all__ = ["fast_rcnn_inference", "FastRCNNOutputLayers", 
-            "OodgFastRCNNOutputLayers"]
+            "OodgFastRCNNOutputLayers", "FastRCNNOutputs"]
 
 
 logger = logging.getLogger(__name__)
