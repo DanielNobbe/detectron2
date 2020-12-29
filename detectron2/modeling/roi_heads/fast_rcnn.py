@@ -12,9 +12,10 @@ from detectron2.modeling.box_regression import Box2BoxTransform
 from detectron2.structures import Boxes, Instances
 from detectron2.utils.events import get_event_storage
 
+from .oodg_fast_rcnn_losses import OodgFastRCNNOutputs
 
 __all__ = ["fast_rcnn_inference", "FastRCNNOutputLayers", 
-            "FastRCNNOutputs"]
+            "OodgFastRCNNOutputLayers", "FastRCNNOutputs"]
 
 
 logger = logging.getLogger(__name__)
@@ -605,5 +606,36 @@ class FastRCNNOutputLayers(nn.Module):
         probs = F.softmax(scores, dim=-1)
         return probs.split(num_inst_per_image, dim=0)
 
+class OodgFastRCNNOutputLayers(FastRCNNOutputLayers):
+    """
+    For now, implement Oodg loss in a new class. Can add a cfg entry later,
+    then we can use if-else logic in FastRCNNOutputLayers to use Oodg loss.
+    Not nessecary to override the initialisation here, only the loss.
+    We only implement the special loss here, so it wouldn't hurt to disable the masking
+    """
+    def losses(self, predictions, proposals, prop_dataset_numbers):
+        """
+        Args:
+            predictions: return values of :meth:`forward()`.
+            proposals (list[Instances]): proposals that match the features that were used
+                to compute predictions. The fields ``proposal_boxes``, ``gt_boxes``,
+                ``gt_classes`` are expected.
+            prop_dataset_numbers (list[Instances]): list of OoDG dataset numbers 
+            each proposal belongs to. 
+
+        Returns:
+            Dict[str, Tensor]: dict of losses
+        """
+        scores, proposal_deltas = predictions
+        losses = OodgFastRCNNOutputs(
+            self.box2box_transform,
+            scores,
+            proposal_deltas,
+            proposals,
+            prop_dataset_numbers,
+            self.smooth_l1_beta,
+            self.box_reg_loss_type,
+        ).losses()
+        return {k: v * self.loss_weight.get(k, 1.0) for k, v in losses.items()}
 
 
