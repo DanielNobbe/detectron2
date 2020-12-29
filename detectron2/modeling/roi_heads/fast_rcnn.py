@@ -656,6 +656,7 @@ class OodgFastRCNNOutputLayers(FastRCNNOutputLayers):
             self.smooth_l1_beta,
             self.box_reg_loss_type,
         ).losses()
+        print("Test in box head losses")
         return {k: v * self.loss_weight.get(k, 1.0) for k, v in losses.items()}
 
 
