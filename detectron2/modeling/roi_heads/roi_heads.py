@@ -18,7 +18,8 @@ from ..poolers import ROIPooler, OodgROIPooler
 from ..proposal_generator.proposal_utils import add_ground_truth_to_proposals
 from ..sampling import subsample_labels
 from .box_head import build_box_head
-from .fast_rcnn import FastRCNNOutputLayers, OodgFastRCNNOutputLayers
+from .fast_rcnn import FastRCNNOutputLayers
+from .oodg_fast_rcnn import OodgFastRCNNOutputLayers
 from .keypoint_head import build_keypoint_head
 from .mask_head import build_mask_head
 
