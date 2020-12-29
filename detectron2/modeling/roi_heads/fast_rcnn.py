@@ -12,6 +12,8 @@ from detectron2.modeling.box_regression import Box2BoxTransform
 from detectron2.structures import Boxes, Instances
 from detectron2.utils.events import get_event_storage
 
+from .oodg_loss import oodg_loss
+
 __all__ = ["fast_rcnn_inference", "FastRCNNOutputLayers"]
 
 
@@ -388,7 +390,7 @@ class OodgFastRCNNOutputs(FastRCNNOutputs):
         self.prop_dataset_numbers = prop_dataset_numbers
 
     def losses(self):
-        return {"loss_cls": self.softmax_cross_entropy_loss(), "loss_box_reg": self.box_reg_loss()}
+        return oodg_loss(self)
 
 
 
