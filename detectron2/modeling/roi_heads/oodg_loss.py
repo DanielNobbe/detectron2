@@ -17,8 +17,7 @@ def oodg_loss(self):
 
     cross_entropy_loss_per_instance = softmax_cross_entropy_loss(self)
     bbox_loss_per_instance = box_reg_loss(self)
-    print("Working from new file")
-
+    
     red_cls_loss = cross_entropy_loss_per_instance.mean()
     red_box_loss = bbox_loss_per_instance.sum()
 
