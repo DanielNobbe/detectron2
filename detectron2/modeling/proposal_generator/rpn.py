@@ -510,7 +510,7 @@ class OodgRPN(nn.Module):
         """
         NOTE: this interface is experimental.
         """
-        super(OodgRPN).init(*args, **kwargs)
+        super(OodgRPN).__init__(*args, **kwargs)
 
     @classmethod
     def from_config(cls, cfg, input_shape: Dict[str, ShapeSpec]):
