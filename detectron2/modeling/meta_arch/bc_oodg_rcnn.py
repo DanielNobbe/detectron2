@@ -67,7 +67,7 @@ class OoDGGeneralizedRCNN(GeneralizedRCNN):
         features = self.backbone(images.tensor)
 
         if self.proposal_generator is not None:
-            proposals, proposal_losses = self.proposal_generator(images, features, gt_instances)
+            proposals, proposal_losses = self.proposal_generator(images, features, oodg_dataset_numbers, gt_instances)
         else:
             assert "proposals" in batched_inputs[0]
             proposals = [x["proposals"].to(self.device) for x in batched_inputs]
