@@ -22,7 +22,7 @@ from .roi_heads import (
 )
 from .rotated_fast_rcnn import RROIHeads
 from .fast_rcnn import FastRCNNOutputLayers
-
+from .oodg_fast_rcnn import OodgFastRCNNOutputLayers
 from . import cascade_rcnn  # isort:skip
 
 __all__ = list(globals().keys())
