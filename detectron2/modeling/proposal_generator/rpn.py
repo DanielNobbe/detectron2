@@ -502,3 +502,17 @@ class RPN(nn.Module):
             # Append feature map proposals with shape (N, Hi*Wi*A, B)
             proposals.append(proposals_i.view(N, -1, B))
         return proposals
+
+@PROPOSAL_GENERATOR_REGISTRY.register()
+class OodgRPN(nn.Module):
+    @configurable
+    def __init__(*args, **kwargs):
+        """
+        NOTE: this interface is experimental.
+        """
+        super(OodgRPN).init(*args, **kwargs)
+
+    @classmethod
+    def from_config(cls, cfg, input_shape: Dict[str, ShapeSpec]):
+        # Not sure if this will work, but hope so
+        super(OodgRPN).from_config(cls, cfg, input_shape: Dict[str, ShapeSpec])

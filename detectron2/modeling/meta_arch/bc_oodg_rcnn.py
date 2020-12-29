@@ -57,6 +57,11 @@ class OoDGGeneralizedRCNN(GeneralizedRCNN):
             gt_instances = [x["instances"].to(self.device) for x in batched_inputs]
         else:
             gt_instances = None
+        
+        if "oodg_dataset_number" in batched_inputs[0]:
+            oodg_dataset_numbers = [x["oodg_dataset_number"] for x in batched_inputs]
+        else:
+            oodg_dataset_numbers = None
 
         features = self.backbone(images.tensor)
         if self.proposal_generator is not None:
@@ -66,10 +71,6 @@ class OoDGGeneralizedRCNN(GeneralizedRCNN):
             proposals = [x["proposals"].to(self.device) for x in batched_inputs]
             proposal_losses = {}
 
-        if "oodg_dataset_number" in batched_inputs[0]:
-            oodg_dataset_numbers = [x["oodg_dataset_number"] for x in batched_inputs]
-        else:
-            oodg_dataset_numbers = None
         if type(self.roi_heads).__name__ == "OodgROIHeads":
             _, detector_losses = self.roi_heads(images, features, proposals, oodg_dataset_numbers,
                 gt_instances) # Add the numbers here?
