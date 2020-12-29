@@ -612,7 +612,7 @@ class OodgRPN(RPN):
         # Then, we have a 1D tensor that indicates the oodg value for each
         # anchor. Same as for the roi head.
 
-        oodg_mask = torch.tensor(oodg_dataset_numbers).view(-1,1) * pos_mask
+        oodg_mask = torch.tensor(oodg_dataset_numbers).view(-1,1).to(gt_labels.device) * pos_mask
         anchor_dataset_numbers = oodg_mask[pos_mask]
         print("Test - anchor dataset numbers: ", anchor_dataset_numbers)
 
