@@ -1032,7 +1032,7 @@ class OodgROIHeads(StandardROIHeads):
         }
 
     def _forward_box(self, features: Dict[str, torch.Tensor], proposals: List[Instances],
-                    oodg_dataset_numbers: List = None):
+                    oodg_dataset_numbers = None):
         """
         Forward logic of the box prediction branch. If `self.train_on_pred_boxes is True`,
             the function puts predicted boxes in the `proposal_boxes` field of `proposals` argument.
