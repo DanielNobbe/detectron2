@@ -19,6 +19,8 @@ from ..sampling import subsample_labels
 from .build import PROPOSAL_GENERATOR_REGISTRY
 from .proposal_utils import find_top_rpn_proposals
 
+from pdb import set_trace
+
 RPN_HEAD_REGISTRY = Registry("RPN_HEAD")
 RPN_HEAD_REGISTRY.__doc__ = """
 Registry for RPN heads, which take feature maps and perform
@@ -616,6 +618,7 @@ class OodgRPN(RPN):
         anchors = type(anchors[0]).cat(anchors).tensor  # Ax(4 or 5)
         gt_anchor_deltas = [self.box2box_transform.get_deltas(anchors, k) for k in gt_boxes]
         gt_anchor_deltas = torch.stack(gt_anchor_deltas)  # (N, sum(Hi*Wi*Ai), 4 or 5)
+        set_trace()
         localization_loss = smooth_l1_loss(
             cat(pred_anchor_deltas, dim=1)[pos_mask],
             gt_anchor_deltas[pos_mask],
@@ -623,6 +626,7 @@ class OodgRPN(RPN):
             reduction="none",
         )
         print("loc. loss shape: ", localization_loss.shape)
+        # This loss no longer keeps track of N
         # elif self.box_reg_loss_type == "giou":
         #     pred_proposals = self._decode_proposals(anchors, pred_anchor_deltas)
         #     pred_proposals = cat(pred_proposals, dim=1)
