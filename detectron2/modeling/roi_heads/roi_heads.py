@@ -1035,7 +1035,7 @@ class OodgROIHeads(StandardROIHeads):
         }
 
     def _forward_box(self, features: Dict[str, torch.Tensor], proposals: List[Instances],
-                    oodg_dataset_numbers: List):
+                    oodg_dataset_numbers: List = None):
         """
         Forward logic of the box prediction branch. If `self.train_on_pred_boxes is True`,
             the function puts predicted boxes in the `proposal_boxes` field of `proposals` argument.
@@ -1058,7 +1058,8 @@ class OodgROIHeads(StandardROIHeads):
         """
         features = [features[f] for f in self.box_in_features] # D: This creates a list of feature tensors per feature map
         box_features, batch_indices = self.box_pooler(features, [x.proposal_boxes for x in proposals]) 
-        prop_dataset_numbers = [oodg_dataset_numbers[batch_index] for batch_index in batch_indices]
+        if self.training:
+            prop_dataset_numbers = [oodg_dataset_numbers[batch_index] for batch_index in batch_indices]
         # Dataset number per proposal
 
         #D: we can return an extra list of batch indixes for each feature map that comes out here
