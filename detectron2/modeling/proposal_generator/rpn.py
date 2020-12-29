@@ -506,7 +506,7 @@ class RPN(nn.Module):
 @PROPOSAL_GENERATOR_REGISTRY.register()
 class OodgRPN(nn.Module):
     @configurable
-    def __init__(*args, **kwargs):
+    def __init__(self, *args, **kwargs):
         """
         NOTE: this interface is experimental.
         """
@@ -515,4 +515,4 @@ class OodgRPN(nn.Module):
     @classmethod
     def from_config(cls, cfg, input_shape: Dict[str, ShapeSpec]):
         # Not sure if this will work, but hope so
-        super().from_config(cls, cfg, input_shape)
+        super(OodgRPN).from_config(cfg, input_shape)
