@@ -612,9 +612,9 @@ class OodgRPN(RPN):
         # Then, we have a 1D tensor that indicates the oodg value for each
         # anchor. Same as for the roi head.
 
-        oodg_mask = torch.tensor(oodg_dataset_numbers).view(-1,1).to(gt_labels.device) * pos_mask
-        anchor_dataset_numbers = oodg_mask[pos_mask]
-        print("Test - anchor dataset numbers: ", anchor_dataset_numbers)
+        oodg_loc_mask = torch.tensor(oodg_dataset_numbers).view(-1,1).to(gt_labels.device) * pos_mask
+        loc_dataset_numbers = oodg_loc_mask[pos_mask]
+        print("Test - anchor dataset numbers: ", loc_dataset_numbers)
 
         num_pos_anchors = pos_mask.sum().item()
         num_neg_anchors = (gt_labels == 0).sum().item()
@@ -662,6 +662,8 @@ class OodgRPN(RPN):
         #     raise ValueError(f"Invalid rpn box reg loss type '{self.box_reg_loss_type}'")
 
         valid_mask = gt_labels >= 0
+        oodg_obj_mask = torch.tensor(oodg_dataset_numbers).view(-1,1).to(gt_labels.device) * pos_mask
+        obj_dataset_numbers = oodg_obj_mask[pos_mask]
         objectness_loss = F.binary_cross_entropy_with_logits(
             cat(pred_objectness_logits, dim=1)[valid_mask],
             gt_labels[valid_mask].to(torch.float32),
