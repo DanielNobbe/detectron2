@@ -614,7 +614,6 @@ class OodgRPN(RPN):
 
         oodg_loc_mask = torch.tensor(oodg_dataset_numbers).view(-1,1).to(gt_labels.device) * pos_mask
         loc_dataset_numbers = oodg_loc_mask[pos_mask]
-        print("Test - anchor dataset numbers: ", loc_dataset_numbers)
 
         num_pos_anchors = pos_mask.sum().item()
         num_neg_anchors = (gt_labels == 0).sum().item()
@@ -622,44 +621,20 @@ class OodgRPN(RPN):
         storage.put_scalar("rpn/num_pos_anchors", num_pos_anchors / num_images)
         storage.put_scalar("rpn/num_neg_anchors", num_neg_anchors / num_images)
 
-        # if self.box_reg_loss_type == "smooth_l1":
-        anchors = type(anchors[0]).cat(anchors).tensor  # Ax(4 or 5)
-        gt_anchor_deltas = [self.box2box_transform.get_deltas(anchors, k) for k in gt_boxes]
-        gt_anchor_deltas = torch.stack(gt_anchor_deltas)  # (N, sum(Hi*Wi*Ai), 4 or 5)
-        localization_loss = smooth_l1_loss(
-            cat(pred_anchor_deltas, dim=1)[pos_mask],
-            gt_anchor_deltas[pos_mask],
-            self.smooth_l1_beta,
-            reduction="none",
-        )
-        print("loc. loss shape: ", localization_loss.shape)
-        # This loss no longer keeps track of N
-        # They use pos_mask to make a selection of all positive anchors, which they use
-        # for loss computation.
-        # So pos_mask also contains info on which of the loss outputs 
-        # corresponds to which image.
-        # pos_mask is only 1 where it is positive
-        # we could apply the pos_mask to a tensor containing oodg_dataset_numbers
-        # but that's not very efficient. 
-
-        # Ok so each image has the exact same amount of anchors and gt
-        # labels. They have differing amounts of positive ones though.
-        # We can count the number of positive ones per image
-        # through pos_mask.sum(dim=1)
-        # Then, probably the first image comes first, etc
-        # Checked, this is correct
-
-
-        # elif self.box_reg_loss_type == "giou":
-        #     pred_proposals = self._decode_proposals(anchors, pred_anchor_deltas)
-        #     pred_proposals = cat(pred_proposals, dim=1)
-        #     pred_proposals = pred_proposals.view(-1, pred_proposals.shape[-1])
-        #     pos_mask = pos_mask.view(-1)
-        #     localization_loss = giou_loss(
-        #         pred_proposals[pos_mask], cat(gt_boxes)[pos_mask], reduction="sum"
-        #     )
-        # else:
-        #     raise ValueError(f"Invalid rpn box reg loss type '{self.box_reg_loss_type}'")
+        if self.box_reg_loss_type == "smooth_l1":
+            anchors = type(anchors[0]).cat(anchors).tensor  # Ax(4 or 5)
+            gt_anchor_deltas = [self.box2box_transform.get_deltas(anchors, k) for k in gt_boxes]
+            gt_anchor_deltas = torch.stack(gt_anchor_deltas)  # (N, sum(Hi*Wi*Ai), 4 or 5)
+            set_trace()
+            localization_loss = smooth_l1_loss(
+                cat(pred_anchor_deltas, dim=1)[pos_mask],
+                gt_anchor_deltas[pos_mask],
+                self.smooth_l1_beta,
+                reduction="none",
+            )
+        else:
+            raise NotImplementedError(
+            "Other box regression loss types not implemented yet for OoDG methods.")
 
         valid_mask = gt_labels >= 0
         oodg_obj_mask = torch.tensor(oodg_dataset_numbers).view(-1,1).to(gt_labels.device) * pos_mask
@@ -669,11 +644,12 @@ class OodgRPN(RPN):
             gt_labels[valid_mask].to(torch.float32),
             reduction="none",
         )
-        print("obj. loss shape: ", objectness_loss.shape)
         normalizer = self.batch_size_per_image * num_images
+        # TODO: In some way lead this through the same
+        # loss function reducer as the other losses (in the roi heads)
         losses = {
-            "loss_rpn_cls": objectness_loss / normalizer,
-            "loss_rpn_loc": localization_loss / normalizer,
+            "loss_rpn_cls": objectness_loss.sum() / normalizer,
+            "loss_rpn_loc": localization_loss.sum() / normalizer,
         }
         losses = {k: v * self.loss_weight.get(k, 1.0) for k, v in losses.items()}
         return losses
