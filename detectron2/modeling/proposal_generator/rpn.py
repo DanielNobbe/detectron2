@@ -603,6 +603,7 @@ class OodgRPN(RPN):
                 Loss names are: `loss_rpn_cls` for objectness classification and
                 `loss_rpn_loc` for proposal localization.
         """
+        set_trace()
         num_images = len(gt_labels)
         gt_labels = torch.stack(gt_labels)  # (N, sum(Hi*Wi*Ai))
 
@@ -627,6 +628,15 @@ class OodgRPN(RPN):
         )
         print("loc. loss shape: ", localization_loss.shape)
         # This loss no longer keeps track of N
+        # They use pos_mask to make a selection of all positive anchors, which they use
+        # for loss computation.
+        # So pos_mask also contains info on which of the loss outputs 
+        # corresponds to which image.
+        # pos_mask is only 1 where it is positive
+        # we could apply the pos_mask to a tensor containing oodg_dataset_numbers
+        # but that's not very efficient. 
+
+
         # elif self.box_reg_loss_type == "giou":
         #     pred_proposals = self._decode_proposals(anchors, pred_anchor_deltas)
         #     pred_proposals = cat(pred_proposals, dim=1)
