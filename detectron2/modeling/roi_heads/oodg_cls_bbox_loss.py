@@ -76,3 +76,17 @@ def box_reg_loss(self):
         )
     else:
         raise ValueError(f"Invalid bbox reg loss type '{self.box_reg_loss_type}'")
+
+    # The loss is normalized using the total number of regions (R), not the number
+    # of foreground regions even though the box regression loss is only defined on
+    # foreground regions. Why? Because doing so gives equal training influence to
+    # each foreground example. To see how, consider two different minibatches:
+    #  (1) Contains a single foreground region
+    #  (2) Contains 100 foreground regions
+    # If we normalize by the number of foreground regions, the single example in
+    # minibatch (1) will be given 100 times as much influence as each foreground
+    # example in minibatch (2). Normalizing by the total number of regions, R,
+    # means that the single example in minibatch (1) and each of the 100 examples
+    # in minibatch (2) are given equal influence.
+    loss_box_reg = loss_box_reg / self.gt_classes.numel()
+    return loss_box_reg
