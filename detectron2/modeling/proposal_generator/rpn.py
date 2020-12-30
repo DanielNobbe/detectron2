@@ -650,7 +650,7 @@ class OodgRPN(RPN):
         # loss function reducer as the other losses (in the roi heads)
 
         red_cls_loss, red_box_loss = oodg_reduce(objectness_loss, 
-                                    localization_loss, oodg_dataset_numbers)
+                                    localization_loss, obj_dataset_numbers, loc_dataset_numbers)
 
         losses = {
             "loss_rpn_cls": red_cls_loss / normalizer,
