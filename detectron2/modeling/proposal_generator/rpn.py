@@ -638,8 +638,8 @@ class OodgRPN(RPN):
             "Other box regression loss types not implemented yet for OoDG methods.")
 
         valid_mask = gt_labels >= 0
-        oodg_obj_mask = torch.tensor(oodg_dataset_numbers).view(-1,1).to(gt_labels.device) * pos_mask
-        obj_dataset_numbers = oodg_obj_mask[pos_mask]
+        oodg_obj_mask = torch.tensor(oodg_dataset_numbers).view(-1,1).to(gt_labels.device) * valid_mask
+        obj_dataset_numbers = oodg_obj_mask[valid_mask]
         objectness_loss = F.binary_cross_entropy_with_logits(
             cat(pred_objectness_logits, dim=1)[valid_mask],
             gt_labels[valid_mask].to(torch.float32),
