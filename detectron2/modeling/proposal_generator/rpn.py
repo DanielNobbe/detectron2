@@ -19,6 +19,8 @@ from ..sampling import subsample_labels
 from .build import PROPOSAL_GENERATOR_REGISTRY
 from .proposal_utils import find_top_rpn_proposals
 
+from detectron2.modeling import oodg_reduce
+
 from pdb import set_trace
 
 RPN_HEAD_REGISTRY = Registry("RPN_HEAD")
@@ -650,9 +652,13 @@ class OodgRPN(RPN):
         normalizer = self.batch_size_per_image * num_images
         # TODO: In some way lead this through the same
         # loss function reducer as the other losses (in the roi heads)
+
+        red_cls_loss, red_box_loss = oodg_reduce(objectness_loss, 
+                                    localization_loss, oodg_dataset_numbers)
+
         losses = {
-            "loss_rpn_cls": objectness_loss.sum() / normalizer,
-            "loss_rpn_loc": localization_loss.sum() / normalizer,
+            "loss_rpn_cls": red_cls_loss / normalizer,
+            "loss_rpn_loc": red_box_loss / normalizer,
         }
         losses = {k: v * self.loss_weight.get(k, 1.0) for k, v in losses.items()}
         return losses
