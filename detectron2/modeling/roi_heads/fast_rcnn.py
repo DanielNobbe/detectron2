@@ -436,7 +436,6 @@ class OodgFastRCNNOutputs(FastRCNNOutputs):
 
         # It's a bit hacky, multiply the mask entries (which are 1 at the masked spots)
         # with the oodg dataset number of the image it belongs to
-        # set_trace()
         # oodg_bbox_mask = self.prop_dataset_numbers.view(-1).to(device) * fg_inds #D: (-1,1)-->(-1)
         bbox_dataset_numbers = self.prop_dataset_numbers[fg_inds]
         if cls_agnostic_bbox_reg:
