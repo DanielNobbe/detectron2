@@ -430,11 +430,15 @@ class OodgFastRCNNOutputs(FastRCNNOutputs):
         # Doesn't every instance have a gt prediction? Except maybe if it's background
         fg_inds = nonzero_tuple((self.gt_classes >= 0) & (self.gt_classes < bg_class_ind))[0]
 
+        # fg_inds is a list of the indices in gt_classes/proposals/prop_dataset_numbers
+        # that contain foreground instances. So it's quite simple, we need to
+        # use bbox_dataset_numbers = self.prop_dataset_numbers[fg_inds]
+
         # It's a bit hacky, multiply the mask entries (which are 1 at the masked spots)
         # with the oodg dataset number of the image it belongs to
-        set_trace()
-        oodg_bbox_mask = self.prop_dataset_numbers.view(-1).to(device) * fg_inds #D: (-1,1)-->(-1)
-        bbox_dataset_numbers = oodg_bbox_mask[fg_inds]
+        # set_trace()
+        # oodg_bbox_mask = self.prop_dataset_numbers.view(-1).to(device) * fg_inds #D: (-1,1)-->(-1)
+        bbox_dataset_numbers = self.prop_dataset_numbers[fg_inds]
         if cls_agnostic_bbox_reg:
             # pred_proposal_deltas only corresponds to foreground class for agnostic
             gt_class_cols = torch.arange(box_dim, device=device)
