@@ -11,7 +11,7 @@ from detectron2.modeling.box_regression import Box2BoxTransform
 from detectron2.structures import Boxes, Instances
 from detectron2.utils.events import get_event_storage
 
-def oodg_reduce(cls_loss, bbox_loss, dataset_numbers_cls, dataset_numbers_bbox=dataset_numbers_cls):
-    # if dataset_numbers_bbox is None:
-    #     datas
+def oodg_reduce(cls_loss, bbox_loss, dataset_numbers_cls, dataset_numbers_bbox=None):
+    if dataset_numbers_bbox is None:
+        dataset_numbers_bbox = dataset_numbers_cls
     return cls_loss.sum(), bbox_loss.sum()
