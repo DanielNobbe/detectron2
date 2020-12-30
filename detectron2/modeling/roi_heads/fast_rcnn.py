@@ -216,7 +216,6 @@ class FastRCNNOutputs:
         else:
             self.proposals = Boxes(torch.zeros(0, 4, device=self.pred_proposal_deltas.device))
         self._no_instances = len(self.proposals) == 0  # no instances found
-        set_trace()
 
     def _log_accuracy(self):
         """
@@ -433,7 +432,7 @@ class OodgFastRCNNOutputs(FastRCNNOutputs):
 
         # It's a bit hacky, multiply the mask entries (which are 1 at the masked spots)
         # with the oodg dataset number of the image it belongs to
-        oodg_bbox_mask = self.prop_dataset_numbers.view(-1,1).to(device) * fg_inds
+        oodg_bbox_mask = self.prop_dataset_numbers.view(-1).to(device) * fg_inds #D: (-1,1)-->(-1)
         bbox_dataset_numbers = oodg_bbox_mask[fg_inds]
         set_trace()
         if cls_agnostic_bbox_reg:
