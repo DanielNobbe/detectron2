@@ -431,7 +431,7 @@ class OodgFastRCNNOutputs(FastRCNNOutputs):
         # It's a bit hacky, multiply the mask entries (which are 1 at the masked spots)
         # with the oodg dataset number of the image it belongs to
         oodg_bbox_mask = self.prop_dataset_numbers.view(-1,1).to(device) * fg_inds
-        bbox_dataset_numbers = oodg_loc_mask[fg_inds]
+        bbox_dataset_numbers = oodg_bbox_mask[fg_inds]
 
         if cls_agnostic_bbox_reg:
             # pred_proposal_deltas only corresponds to foreground class for agnostic
