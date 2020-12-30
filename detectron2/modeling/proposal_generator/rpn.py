@@ -21,6 +21,8 @@ from .proposal_utils import find_top_rpn_proposals
 
 from detectron2.modeling.oodg_loss import oodg_reduce
 
+from pdb import set_trace
+
 RPN_HEAD_REGISTRY = Registry("RPN_HEAD")
 RPN_HEAD_REGISTRY.__doc__ = """
 Registry for RPN heads, which take feature maps and perform
@@ -645,6 +647,7 @@ class OodgRPN(RPN):
             gt_labels[valid_mask].to(torch.float32),
             reduction="none",
         )
+        set_trace()
         normalizer = self.batch_size_per_image * num_images
         # TODO: In some way lead this through the same
         # loss function reducer as the other losses (in the roi heads)
