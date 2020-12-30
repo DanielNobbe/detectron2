@@ -428,6 +428,12 @@ class OodgFastRCNNOutputs(FastRCNNOutputs):
         # arg to smooth_l1_loss is False (otherwise it uses torch.mean internally
         # and would produce a nan loss).
         fg_inds = nonzero_tuple((self.gt_classes >= 0) & (self.gt_classes < bg_class_ind))[0]
+
+        # It's a bit hacky, multiply the mask entries (which are 1 at the masked spots)
+        # with the oodg dataset number of the image it belongs to
+        oodg_bbox_mask = torch.tensor(oodg_dataset_numbers).view(-1,1).to(gt_labels.device) * fg_inds
+        bbox_dataset_numbers = oodg_loc_mask[fg_inds]
+
         if cls_agnostic_bbox_reg:
             # pred_proposal_deltas only corresponds to foreground class for agnostic
             gt_class_cols = torch.arange(box_dim, device=device)
@@ -470,11 +476,11 @@ class OodgFastRCNNOutputs(FastRCNNOutputs):
         # means that the single example in minibatch (1) and each of the 100 examples
         # in minibatch (2) are given equal influence.
         loss_box_reg = loss_box_reg / self.gt_classes.numel()
-        return loss_box_reg
+        return loss_box_reg, bbox_dataset_numbers
 
     def losses(self):
         cross_entropy_loss_per_instance = self.softmax_cross_entropy_loss()
-        bbox_loss_per_instance = self.box_reg_loss()
+        bbox_loss_per_instance, bbox_dataset_numbers = self.box_reg_loss()
         # The cls loss is reduced with mean in original detectron2
         # So let's divide it by the number of entries
         # red_box_loss = bbox_loss_per_instance.sum()
@@ -482,7 +488,7 @@ class OodgFastRCNNOutputs(FastRCNNOutputs):
         cross_entropy_loss_per_instance /= len(cross_entropy_loss_per_instance)
         dataset_numbers = self.prop_dataset_numbers
         red_cls_loss, red_box_loss = oodg_reduce(cross_entropy_loss_per_instance, 
-                                    bbox_loss_per_instance, dataset_numbers)
+                                    bbox_loss_per_instance, dataset_numbers, bbox_dataset_numbers)
 
         return {"loss_cls": red_cls_loss, "loss_box_reg": red_box_loss}
         # return oodg_loss(self)
