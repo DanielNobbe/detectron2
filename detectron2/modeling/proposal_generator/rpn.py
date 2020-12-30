@@ -19,7 +19,7 @@ from ..sampling import subsample_labels
 from .build import PROPOSAL_GENERATOR_REGISTRY
 from .proposal_utils import find_top_rpn_proposals
 
-from detectron2.modeling import oodg_reduce
+from detectron2.modeling.oodg_loss import oodg_reduce
 
 RPN_HEAD_REGISTRY = Registry("RPN_HEAD")
 RPN_HEAD_REGISTRY.__doc__ = """
