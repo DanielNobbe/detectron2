@@ -21,8 +21,6 @@ from .proposal_utils import find_top_rpn_proposals
 
 from detectron2.modeling.oodg_loss import oodg_reduce
 
-from pdb import set_trace
-
 RPN_HEAD_REGISTRY = Registry("RPN_HEAD")
 RPN_HEAD_REGISTRY.__doc__ = """
 Registry for RPN heads, which take feature maps and perform
@@ -605,7 +603,6 @@ class OodgRPN(RPN):
                 Loss names are: `loss_rpn_cls` for objectness classification and
                 `loss_rpn_loc` for proposal localization.
         """
-        set_trace()
         num_images = len(gt_labels)
         gt_labels = torch.stack(gt_labels)  # (N, sum(Hi*Wi*Ai))
 
@@ -630,7 +627,6 @@ class OodgRPN(RPN):
             anchors = type(anchors[0]).cat(anchors).tensor  # Ax(4 or 5)
             gt_anchor_deltas = [self.box2box_transform.get_deltas(anchors, k) for k in gt_boxes]
             gt_anchor_deltas = torch.stack(gt_anchor_deltas)  # (N, sum(Hi*Wi*Ai), 4 or 5)
-            set_trace()
             localization_loss = smooth_l1_loss(
                 cat(pred_anchor_deltas, dim=1)[pos_mask],
                 gt_anchor_deltas[pos_mask],
