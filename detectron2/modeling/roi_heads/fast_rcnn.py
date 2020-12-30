@@ -14,6 +14,8 @@ from detectron2.utils.events import get_event_storage
 
 from detectron2.modeling.oodg_loss import oodg_reduce
 
+from pdb import set_trace
+
 __all__ = ["fast_rcnn_inference", "FastRCNNOutputLayers"]
 
 
@@ -214,6 +216,7 @@ class FastRCNNOutputs:
         else:
             self.proposals = Boxes(torch.zeros(0, 4, device=self.pred_proposal_deltas.device))
         self._no_instances = len(self.proposals) == 0  # no instances found
+        set_trace()
 
     def _log_accuracy(self):
         """
