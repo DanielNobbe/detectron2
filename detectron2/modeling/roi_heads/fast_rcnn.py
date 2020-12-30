@@ -427,6 +427,8 @@ class OodgFastRCNNOutputs(FastRCNNOutputs):
         # Empty fg_inds produces a valid loss of zero as long as the size_average
         # arg to smooth_l1_loss is False (otherwise it uses torch.mean internally
         # and would produce a nan loss).
+        # D: They throw out some instances, although I'm not sure which ones exactly
+        # Doesn't every instance have a gt prediction? Except maybe if it's background
         fg_inds = nonzero_tuple((self.gt_classes >= 0) & (self.gt_classes < bg_class_ind))[0]
 
         # It's a bit hacky, multiply the mask entries (which are 1 at the masked spots)
