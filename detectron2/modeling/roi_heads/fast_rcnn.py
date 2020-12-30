@@ -12,7 +12,7 @@ from detectron2.modeling.box_regression import Box2BoxTransform
 from detectron2.structures import Boxes, Instances
 from detectron2.utils.events import get_event_storage
 
-from detectron2.modeling import oodg_reduce
+from detectron2.modeling.oodg_loss import oodg_reduce
 
 __all__ = ["fast_rcnn_inference", "FastRCNNOutputLayers"]
 
