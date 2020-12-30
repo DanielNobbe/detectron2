@@ -1059,7 +1059,7 @@ class OodgROIHeads(StandardROIHeads):
         features = [features[f] for f in self.box_in_features] # D: This creates a list of feature tensors per feature map
         box_features, batch_indices = self.box_pooler(features, [x.proposal_boxes for x in proposals]) 
         if self.training:
-            prop_dataset_numbers = [oodg_dataset_numbers[batch_index] for batch_index in batch_indices]
+            prop_dataset_numbers = torch.tensor([oodg_dataset_numbers[batch_index] for batch_index in batch_indices])
         # Dataset number per proposal
 
         #D: we can return an extra list of batch indixes for each feature map that comes out here
