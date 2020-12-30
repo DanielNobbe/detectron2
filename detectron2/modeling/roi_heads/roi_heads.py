@@ -1072,6 +1072,8 @@ class OodgROIHeads(StandardROIHeads):
         # D: Predictions is a tuple of scores, bbox_deltas, where scores is a tensor of (M, K+1) (K object classes, 1 background class)
         # D: bbox_deltas is a tensor of (M, 4K)
         del box_features
+        # print("Proposal shape":)
+        set_trace()
         if self.training:
             losses = self.box_predictor.losses(predictions, proposals, prop_dataset_numbers)
             # proposals is modified in-place below, so losses must be computed first.
