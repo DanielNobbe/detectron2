@@ -406,10 +406,14 @@ class OodgFastRCNNOutputs(FastRCNNOutputs):
 
     def box_reg_loss(self):
         """
-        Compute the smooth L1 loss for box regression.
+        Compute the smooth L1 loss for box regression. 
+        Propagates the dataset number per proposal to the dataset number
+        per bbox loss term, since some proposals (background) are 
+        dropped.
 
         Returns:
-            scalar Tensor
+            tuple(1D Tensor loss per bbox, 1D Tensor dataset number per bbox)
+            both with length (number of positive bboxes)
         """
         if self._no_instances:
             return 0.0 * self.pred_proposal_deltas.sum()
@@ -483,6 +487,13 @@ class OodgFastRCNNOutputs(FastRCNNOutputs):
         return loss_box_reg, bbox_dataset_numbers
 
     def losses(self):
+        """
+        Computes the classification and bbox losses per object instance,
+        and then reduces these using the oodg_reduce function, for risk-
+        based OoDG methods. 
+        Returns:
+            A dict of losses (scalar tensors) containing keys "loss_cls" and "loss_box_reg".
+        """
         cross_entropy_loss_per_instance = self.softmax_cross_entropy_loss()
         bbox_loss_per_instance, bbox_dataset_numbers = self.box_reg_loss()
         # The cls loss is reduced with mean in original detectron2
@@ -495,7 +506,6 @@ class OodgFastRCNNOutputs(FastRCNNOutputs):
                                     bbox_loss_per_instance, dataset_numbers, bbox_dataset_numbers)
 
         return {"loss_cls": red_cls_loss, "loss_box_reg": red_box_loss}
-        # return oodg_loss(self)
 
 
 
@@ -735,10 +745,8 @@ class FastRCNNOutputLayers(nn.Module):
 
 class OodgFastRCNNOutputLayers(FastRCNNOutputLayers):
     """
-    For now, implement Oodg loss in a new class. Can add a cfg entry later,
-    then we can use if-else logic in FastRCNNOutputLayers to use Oodg loss.
-    Not nessecary to override the initialisation here, only the loss.
-    We only implement the special loss here, so it wouldn't hurt to disable the masking
+    OoDG version of FastRCNNOutputLayers. Uses the dataset/domain number
+    for each proposal to compute the losses.
     """
     def losses(self, predictions, proposals, prop_dataset_numbers):
         """

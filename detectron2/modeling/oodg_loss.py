@@ -21,7 +21,7 @@ def oodg_reduce(cls_loss, bbox_loss, dataset_numbers_cls,
     We can use the dataset number each object belongs to in the reduction
     function, so that, for instance, each domain (=dataset_number) has an equal 
     weight in the final loss calculation. 
-
+    Default behavior is taking a sum of all loss values per loss type.
     Args:
         cls_loss (torch.Tensor): 1D tensor, with the classification loss for
             each object. Has dimensions (num_obj_cls,).

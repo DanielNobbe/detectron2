@@ -251,6 +251,15 @@ class ROIPooler(nn.Module):
         return output
 
 class OodgROIPooler(ROIPooler):
+    """
+    Version of the ROIPooler for risk-based OoDG methods. 
+    In the forward pass of the pooler, images are converted into
+    boxes, so the oodg_dataset_numbers per image can no longer be
+    used. As such, this pooler keeps track of which image results in
+    which box, so that the domain numbers can be used in the loss
+    calculation. In short, it also returns the batch indices of the
+    image each box comes from. 
+    """
     def forward(self, x: List[torch.Tensor], box_lists: List[Boxes]):
         """
         Args:
