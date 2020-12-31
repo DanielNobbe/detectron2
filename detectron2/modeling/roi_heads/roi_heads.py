@@ -886,24 +886,25 @@ class StandardROIHeads(ROIHeads):
 
 @ROI_HEADS_REGISTRY.register()
 class OodgROIHeads(StandardROIHeads):
+    """
+    ROI Heads modified for use with risk-based OoDG methods. 
+    This means that is propagates the domain number (oodg_dataset_numbers)
+    belonging to each image to the loss calculation. 
+    """
     @configurable
     def __init__(self, *args, **kwargs): # D: Keep this general to prevent breaking anything. 
         # Probably only the kwargs argument would be enough though
         # Included this since class needs its own @configurable call to use a new from_config function
         """
-        NOTE: this interface is experimental. Not sure that this is what I should be using then..
-        Andrei also used it though, so should be okay.
+        NOTE: this interface is experimental. 
+        Simply initializes the object as its base class.
         """
         super(OodgROIHeads, self).__init__(*args, **kwargs)
 
     @classmethod
     def from_config(cls, cfg, input_shape):
-        #D: this is the base function that is called when a model is defined from a config file,
-        # which is what we need to modify.
-        # D: not modified this function, probably not necessary.
-        # This function returns a dict of arguments to pass to the init function
-
-        ret = super(StandardROIHeads, cls).from_config(cfg) # D: Linter says this is wrong, but it works
+        
+        ret = super(StandardROIHeads, cls).from_config(cfg) 
         ret["train_on_pred_boxes"] = cfg.MODEL.ROI_BOX_HEAD.TRAIN_ON_PRED_BOXES
         # Subclasses that have not been updated to use from_config style construction
         # may have overridden _init_*_head methods. In this case, those overridden methods
@@ -925,9 +926,11 @@ class OodgROIHeads(StandardROIHeads):
         proposals: List[Instances],
         oodg_dataset_numbers: List,
         targets: Optional[List[Instances]] = None,
-    ) -> Tuple[List[Instances], Dict[str, torch.Tensor]]: # D: This last bit is the return types
+    ) -> Tuple[List[Instances], Dict[str, torch.Tensor]]: 
         """
         See :class:`ROIHeads.forward`.
+        This version propagates the oodg_dataset_numbers to the loss
+        calculation, for use in risk-based OoDG methods.
         """
         del images
         if self.training:
@@ -949,49 +952,7 @@ class OodgROIHeads(StandardROIHeads):
             # applied to the top scoring box detections.
             pred_instances = self.forward_with_given_boxes(features, pred_instances)
             return pred_instances, {}
-    # @classmethod
-    # def _init_box_head(cls, cfg, input_shape):
-    #     # D: this is one of the methods used for initialisation from cfg files, which is what we want
-    #     # fmt: off
-    #     in_features       = cfg.MODEL.ROI_HEADS.IN_FEATURES
-    #     pooler_resolution = cfg.MODEL.ROI_BOX_HEAD.POOLER_RESOLUTION
-    #     pooler_scales     = tuple(1.0 / input_shape[k].stride for k in in_features)
-    #     sampling_ratio    = cfg.MODEL.ROI_BOX_HEAD.POOLER_SAMPLING_RATIO
-    #     pooler_type       = cfg.MODEL.ROI_BOX_HEAD.POOLER_TYPE
-    #     # fmt: on
-
-    #     # If StandardROIHeads is applied on multiple feature maps (as in FPN),
-    #     # then we share the same predictors and therefore the channel counts must be the same
-    #     in_channels = [input_shape[f].channels for f in in_features]
-    #     # Check all channel counts are equal
-    #     assert len(set(in_channels)) == 1, in_channels
-    #     in_channels = in_channels[0]
-
-    #     box_pooler = OodgROIPooler(
-    #         output_size=pooler_resolution,
-    #         scales=pooler_scales,
-    #         sampling_ratio=sampling_ratio,
-    #         pooler_type=pooler_type,
-    #     )
-    #     # Here we split "box head" and "box predictor", which is mainly due to historical reasons.
-    #     # They are used together so the "box predictor" layers should be part of the "box head".
-    #     # New subclasses of ROIHeads do not need "box predictor"s.
-    #     box_head = build_box_head(
-    #         cfg, ShapeSpec(channels=in_channels, height=pooler_resolution, width=pooler_resolution)
-    #     )
-    #     # set_trace()
-    #     box_predictor = FastRCNNOutputLayers(cfg, box_head.output_shape) # D: Modifying this line should do the trick
-    #     # D: and then we should modify the forward fn as well
-    #     return {
-    #         "box_in_features": in_features,
-    #         "box_pooler": box_pooler,
-    #         "box_head": box_head,
-    #         "box_predictor": box_predictor,
-    #     }
-
-
-# @ROI_HEADS_REGISTRY.register()
-# class OodgROIHeads(ROIHeads):
+ 
     @classmethod
     def _init_box_head(cls, cfg, input_shape):
         # D: this is one of the methods used for initialisation from cfg files, which is what we want
@@ -1010,7 +971,7 @@ class OodgROIHeads(StandardROIHeads):
         assert len(set(in_channels)) == 1, in_channels
         in_channels = in_channels[0]
 
-        box_pooler = OodgROIPooler( # TODO: Do this through a cfg entry
+        box_pooler = OodgROIPooler( 
             output_size=pooler_resolution,
             scales=pooler_scales,
             sampling_ratio=sampling_ratio,
@@ -1045,8 +1006,8 @@ class OodgROIHeads(StandardROIHeads):
                 Each has fields "proposal_boxes", and "objectness_logits",
                 "gt_classes", "gt_boxes".
             oodg_dataset_numbers: List: The dataset number each image belongs to, based on
-            batch index. The dataset number of batch image 0 can be found at 
-            oodg_dataset_numbers[0].
+                batch index. The dataset number of batch image 0 can be found at 
+                oodg_dataset_numbers[0].
 
 
         Returns:

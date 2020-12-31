@@ -26,6 +26,14 @@ __all__ = ["OoDGGeneralizedRCNN"]
 class OoDGGeneralizedRCNN(GeneralizedRCNN):
     def forward(self, batched_inputs: Tuple[Dict[str, torch.Tensor]]):
         """
+        Generalized RCNN class modified for risk-based OoDG methods, 
+        which need to keep track of which domain (oodg_dataset_number)
+        each sample/object belongs to. Examples of such methods are IRM
+        (Arjovsky et al., 2019) and REx (Krueger et al., 2020).
+        This requires that the oodg_dataset_number is defined in the 
+        data dict for each image.
+        NOTE: This class is not tested on datasets without the 
+        oodg_dataset_number, which might cause problems. 
         Args:
             batched_inputs: a list, batched outputs of :class:`DatasetMapper` .
                 Each item in the list contains the inputs for one image.

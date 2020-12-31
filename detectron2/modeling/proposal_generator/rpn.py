@@ -508,6 +508,11 @@ class RPN(nn.Module):
 
 @PROPOSAL_GENERATOR_REGISTRY.register()
 class OodgRPN(RPN):
+    """
+    Modified RPN class for risk-based OoDG methods. Uses the domain 
+    number (oodg_dataset_numbers) of each image to inform loss calculation.
+
+    """
     @configurable
     def __init__(self, *args, **kwargs):
         """
@@ -534,6 +539,8 @@ class OodgRPN(RPN):
                 map name to tensor. Axis 0 represents the number of images `N` in
                 the input data; axes 1-3 are channels, height, and width, which may
                 vary between feature maps (e.g., if a feature pyramid is used).
+            oodg_dataset_numbers: domain / dataset number belonging to each image.
+                Has length 'N'. These numbers are propagated to the RPN loss functions.
             gt_instances (list[Instances], optional): a length `N` list of `Instances`s.
                 Each `Instances` stores ground-truth instances for the corresponding image.
 
@@ -585,7 +592,8 @@ class OodgRPN(RPN):
     ) -> Dict[str, torch.Tensor]:
         """
         Return the losses from a set of RPN predictions and their associated ground-truth.
-
+        Passes the domain / OoDG dataset number of each detected object instance to the 
+        loss functions, for use in risk-based OoDG methods. 
         Args:
             anchors (list[Boxes or RotatedBoxes]): anchors for each feature map, each
                 has shape (Hi*Wi*A, B), where B is box dimension (4 or 5).
@@ -597,6 +605,8 @@ class OodgRPN(RPN):
                 (N, Hi*Wi*A, 4 or 5) representing the predicted "deltas" used to transform anchors
                 to proposals.
             gt_boxes (list[Tensor]): Output of :meth:`label_and_sample_anchors`.
+            oodg_dataset_numbers (list[int]): Domain / dataset number for each image
+            in batch. 
 
         Returns:
             dict[loss name -> loss value]: A dict mapping from loss name to loss value.
@@ -615,7 +625,7 @@ class OodgRPN(RPN):
         # anchor. Same as for the roi head.
 
         oodg_loc_mask = torch.tensor(oodg_dataset_numbers).view(-1,1).to(gt_labels.device) * pos_mask
-        loc_dataset_numbers = oodg_loc_mask[pos_mask]
+        loc_dataset_numbers = oodg_loc_mask[pos_mask] # OoDG dataset number for each positive anchor
 
         num_pos_anchors = pos_mask.sum().item()
         num_neg_anchors = (gt_labels == 0).sum().item()
@@ -646,9 +656,9 @@ class OodgRPN(RPN):
             reduction="none",
         )
         normalizer = self.batch_size_per_image * num_images
-        # TODO: In some way lead this through the same
-        # loss function reducer as the other losses (in the roi heads)
 
+        # Use the OoDG loss reduction function to weight the losses
+        # for use with risk-based OoDG methods.
         red_cls_loss, red_box_loss = oodg_reduce(objectness_loss, 
                                     localization_loss, obj_dataset_numbers, loc_dataset_numbers)
 
