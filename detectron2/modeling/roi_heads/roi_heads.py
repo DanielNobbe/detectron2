@@ -22,8 +22,6 @@ from .fast_rcnn import FastRCNNOutputLayers, OodgFastRCNNOutputLayers
 from .keypoint_head import build_keypoint_head
 from .mask_head import build_mask_head
 
-from pdb import set_trace
-
 ROI_HEADS_REGISTRY = Registry("ROI_HEADS")
 ROI_HEADS_REGISTRY.__doc__ = """
 Registry for ROI heads in a generalized R-CNN model.
@@ -796,7 +794,6 @@ class StandardROIHeads(ROIHeads):
         box_features = self.box_pooler(features, [x.proposal_boxes for x in proposals]) 
         #D: we can return an extra list of batch indixes for each feature map that comes out here
         # D: are they all separate tensors though? Or one big tensor?
-        set_trace()
         # D: box_features is a 4D tensor. (M, C, output_size, output_size) - M is the total number of maps
         box_features = self.box_head(box_features)
         # D: box_features is now a 2D tensor (M, F), with a vector per map.
@@ -1025,7 +1022,6 @@ class OodgROIHeads(StandardROIHeads):
 
         #D: we can return an extra list of batch indixes for each feature map that comes out here
         # D: are they all separate tensors though? Or one big tensor?
-        # set_trace()
         # D: box_features is a 4D tensor. (M, C, output_size, output_size) - M is the total number of maps
         box_features = self.box_head(box_features) 
         # D: box_features is now a 2D tensor (M, F), with a vector per map.
@@ -1033,8 +1029,7 @@ class OodgROIHeads(StandardROIHeads):
         # D: Predictions is a tuple of scores, bbox_deltas, where scores is a tensor of (M, K+1) (K object classes, 1 background class)
         # D: bbox_deltas is a tensor of (M, 4K)
         del box_features
-        # print("Proposal shape":)
-        # set_trace()
+
         if self.training:
             losses = self.box_predictor.losses(predictions, proposals, prop_dataset_numbers)
             # proposals is modified in-place below, so losses must be computed first.
