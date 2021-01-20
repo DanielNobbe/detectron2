@@ -61,7 +61,6 @@ class OoDGGeneralizedRCNN(GeneralizedRCNN):
             return self.inference(batched_inputs)
 
         images = self.preprocess_image(batched_inputs)
-        print("Imagelist size: ", images.shape)
         if "instances" in batched_inputs[0]:
             gt_instances = [x["instances"].to(self.device) for x in batched_inputs]
         else:
