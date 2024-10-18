@@ -14,11 +14,11 @@ from detectron2.utils.registry import Registry
 
 from ..backbone.resnet import BottleneckBlock, ResNet
 from ..matcher import Matcher
-from ..poolers import ROIPooler
+from ..poolers import ROIPooler, OodgROIPooler
 from ..proposal_generator.proposal_utils import add_ground_truth_to_proposals
 from ..sampling import subsample_labels
 from .box_head import build_box_head
-from .fast_rcnn import FastRCNNOutputLayers
+from .fast_rcnn import FastRCNNOutputLayers, OodgFastRCNNOutputLayers
 from .keypoint_head import build_keypoint_head
 from .mask_head import build_mask_head
 
@@ -516,6 +516,7 @@ class Res5ROIHeads(ROIHeads):
             return instances
 
 
+
 @ROI_HEADS_REGISTRY.register()
 class StandardROIHeads(ROIHeads):
     """
@@ -589,6 +590,9 @@ class StandardROIHeads(ROIHeads):
 
     @classmethod
     def from_config(cls, cfg, input_shape):
+        #D: this is the base function that is called when a model is defined from a config file,
+        # which is what we need to modify. It should return a dict of arguments to pass to the init function
+
         ret = super().from_config(cfg)
         ret["train_on_pred_boxes"] = cfg.MODEL.ROI_BOX_HEAD.TRAIN_ON_PRED_BOXES
         # Subclasses that have not been updated to use from_config style construction
@@ -606,6 +610,7 @@ class StandardROIHeads(ROIHeads):
 
     @classmethod
     def _init_box_head(cls, cfg, input_shape):
+        # D: this is one of the methods used for initialisation from cfg files, which is what we want
         # fmt: off
         in_features       = cfg.MODEL.ROI_HEADS.IN_FEATURES
         pooler_resolution = cfg.MODEL.ROI_BOX_HEAD.POOLER_RESOLUTION
@@ -633,7 +638,8 @@ class StandardROIHeads(ROIHeads):
         box_head = build_box_head(
             cfg, ShapeSpec(channels=in_channels, height=pooler_resolution, width=pooler_resolution)
         )
-        box_predictor = FastRCNNOutputLayers(cfg, box_head.output_shape)
+        box_predictor = FastRCNNOutputLayers(cfg, box_head.output_shape) # D: Modifying this line should do the trick
+        # D: and then we should modify the forward fn as well
         return {
             "box_in_features": in_features,
             "box_pooler": box_pooler,
@@ -784,10 +790,16 @@ class StandardROIHeads(ROIHeads):
             In training, a dict of losses.
             In inference, a list of `Instances`, the predicted instances.
         """
-        features = [features[f] for f in self.box_in_features]
-        box_features = self.box_pooler(features, [x.proposal_boxes for x in proposals])
+        features = [features[f] for f in self.box_in_features] # D: This creates a list of feature tensors per feature map
+        box_features = self.box_pooler(features, [x.proposal_boxes for x in proposals]) 
+        #D: we can return an extra list of batch indixes for each feature map that comes out here
+        # D: are they all separate tensors though? Or one big tensor?
+        # D: box_features is a 4D tensor. (M, C, output_size, output_size) - M is the total number of maps
         box_features = self.box_head(box_features)
+        # D: box_features is now a 2D tensor (M, F), with a vector per map.
         predictions = self.box_predictor(box_features)
+        # D: Predictions is a tuple of scores, bbox_deltas, where scores is a tensor of (M, K+1) (K object classes, 1 background class)
+        # D: bbox_deltas is a tensor of (M, 4K)
         del box_features
 
         if self.training:
@@ -872,3 +884,163 @@ class StandardROIHeads(ROIHeads):
         else:
             features = dict([(f, features[f]) for f in self.keypoint_in_features])
         return self.keypoint_head(features, instances)
+
+@ROI_HEADS_REGISTRY.register()
+class OodgROIHeads(StandardROIHeads):
+    """
+    ROI Heads modified for use with risk-based OoDG methods. 
+    This means that is propagates the domain number (oodg_dataset_numbers)
+    belonging to each image to the loss calculation. 
+    """
+    @configurable
+    def __init__(self, *args, **kwargs): # D: Keep this general to prevent breaking anything. 
+        # Probably only the kwargs argument would be enough though
+        # Included this since class needs its own @configurable call to use a new from_config function
+        """
+        NOTE: this interface is experimental. 
+        Simply initializes the object as its base class.
+        """
+        super(OodgROIHeads, self).__init__(*args, **kwargs)
+
+    @classmethod
+    def from_config(cls, cfg, input_shape):
+        
+        ret = super(StandardROIHeads, cls).from_config(cfg) 
+        ret["train_on_pred_boxes"] = cfg.MODEL.ROI_BOX_HEAD.TRAIN_ON_PRED_BOXES
+        # Subclasses that have not been updated to use from_config style construction
+        # may have overridden _init_*_head methods. In this case, those overridden methods
+        # will not be classmethods and we need to avoid trying to call them here.
+        # We test for this with ismethod which only returns True for bound methods of cls.
+        # Such subclasses will need to handle calling their overridden _init_*_head methods.
+        if inspect.ismethod(cls._init_box_head):
+            ret.update(cls._init_box_head(cfg, input_shape))
+        if inspect.ismethod(cls._init_mask_head):
+            ret.update(cls._init_mask_head(cfg, input_shape))
+        if inspect.ismethod(cls._init_keypoint_head):
+            ret.update(cls._init_keypoint_head(cfg, input_shape))
+        return ret
+    
+    def forward(
+        self,
+        images: ImageList,
+        features: Dict[str, torch.Tensor],
+        proposals: List[Instances],
+        oodg_dataset_numbers: List,
+        targets: Optional[List[Instances]] = None,
+    ) -> Tuple[List[Instances], Dict[str, torch.Tensor]]: 
+        """
+        See :class:`ROIHeads.forward`.
+        This version propagates the oodg_dataset_numbers to the loss
+        calculation, for use in risk-based OoDG methods.
+        """
+        del images
+        if self.training:
+            assert targets, "'targets' argument is required during training"
+            proposals = self.label_and_sample_proposals(proposals, targets)
+        del targets
+
+        if self.training:
+            losses = self._forward_box(features, proposals, oodg_dataset_numbers)
+            # Usually the original proposals used by the box head are used by the mask, keypoint
+            # heads. But when `self.train_on_pred_boxes is True`, proposals will contain boxes
+            # predicted by the box head.
+            losses.update(self._forward_mask(features, proposals))
+            losses.update(self._forward_keypoint(features, proposals))
+            return proposals, losses
+        else:
+            pred_instances = self._forward_box(features, proposals)
+            # During inference cascaded prediction is used: the mask and keypoints heads are only
+            # applied to the top scoring box detections.
+            pred_instances = self.forward_with_given_boxes(features, pred_instances)
+            return pred_instances, {}
+ 
+    @classmethod
+    def _init_box_head(cls, cfg, input_shape):
+        # D: this is one of the methods used for initialisation from cfg files, which is what we want
+        # fmt: off
+        in_features       = cfg.MODEL.ROI_HEADS.IN_FEATURES
+        pooler_resolution = cfg.MODEL.ROI_BOX_HEAD.POOLER_RESOLUTION
+        pooler_scales     = tuple(1.0 / input_shape[k].stride for k in in_features)
+        sampling_ratio    = cfg.MODEL.ROI_BOX_HEAD.POOLER_SAMPLING_RATIO
+        pooler_type       = cfg.MODEL.ROI_BOX_HEAD.POOLER_TYPE
+        # fmt: on
+
+        # If StandardROIHeads is applied on multiple feature maps (as in FPN),
+        # then we share the same predictors and therefore the channel counts must be the same
+        in_channels = [input_shape[f].channels for f in in_features]
+        # Check all channel counts are equal
+        assert len(set(in_channels)) == 1, in_channels
+        in_channels = in_channels[0]
+
+        box_pooler = OodgROIPooler( 
+            output_size=pooler_resolution,
+            scales=pooler_scales,
+            sampling_ratio=sampling_ratio,
+            pooler_type=pooler_type,
+        )
+        # Here we split "box head" and "box predictor", which is mainly due to historical reasons.
+        # They are used together so the "box predictor" layers should be part of the "box head".
+        # New subclasses of ROIHeads do not need "box predictor"s.
+        box_head = build_box_head(
+            cfg, ShapeSpec(channels=in_channels, height=pooler_resolution, width=pooler_resolution)
+        )
+        box_predictor = OodgFastRCNNOutputLayers(cfg, box_head.output_shape) # D: Modifying this line should do the trick
+        # D: and then we should modify the forward fn as well
+        return {
+            "box_in_features": in_features,
+            "box_pooler": box_pooler,
+            "box_head": box_head,
+            "box_predictor": box_predictor,
+        }
+
+    def _forward_box(self, features: Dict[str, torch.Tensor], proposals: List[Instances],
+                    oodg_dataset_numbers = None):
+        """
+        Forward logic of the box prediction branch. If `self.train_on_pred_boxes is True`,
+            the function puts predicted boxes in the `proposal_boxes` field of `proposals` argument.
+
+        Args:
+            features (dict[str, Tensor]): mapping from feature map names to tensor.
+                Same as in :meth:`ROIHeads.forward`.
+            proposals (list[Instances]): the per-image object proposals with
+                their matching ground truth.
+                Each has fields "proposal_boxes", and "objectness_logits",
+                "gt_classes", "gt_boxes".
+            oodg_dataset_numbers: List: The dataset number each image belongs to, based on
+                batch index. The dataset number of batch image 0 can be found at 
+                oodg_dataset_numbers[0].
+
+
+        Returns:
+            In training, a dict of losses.
+            In inference, a list of `Instances`, the predicted instances.
+        """
+        features = [features[f] for f in self.box_in_features] # D: This creates a list of feature tensors per feature map
+        box_features, batch_indices = self.box_pooler(features, [x.proposal_boxes for x in proposals]) 
+        if self.training:
+            prop_dataset_numbers = torch.tensor([oodg_dataset_numbers[batch_index] for batch_index in batch_indices])
+        # Dataset number per proposal
+
+        #D: we can return an extra list of batch indixes for each feature map that comes out here
+        # D: are they all separate tensors though? Or one big tensor?
+        # D: box_features is a 4D tensor. (M, C, output_size, output_size) - M is the total number of maps
+        box_features = self.box_head(box_features)
+        # D: box_features is now a 2D tensor (M, F), with a vector per map.
+        predictions = self.box_predictor(box_features)
+        # D: Predictions is a tuple of scores, bbox_deltas, where scores is a tensor of (M, K+1) (K object classes, 1 background class)
+        # D: bbox_deltas is a tensor of (M, 4K)
+        del box_features
+        if self.training:
+            losses = self.box_predictor.losses(predictions, proposals, prop_dataset_numbers)
+            # proposals is modified in-place below, so losses must be computed first.
+            if self.train_on_pred_boxes:
+                with torch.no_grad():
+                    pred_boxes = self.box_predictor.predict_boxes_for_gt_classes(
+                        predictions, proposals
+                    )
+                    for proposals_per_image, pred_boxes_per_image in zip(proposals, pred_boxes):
+                        proposals_per_image.proposal_boxes = Boxes(pred_boxes_per_image)
+            return losses
+        else:
+            pred_instances, _ = self.box_predictor.inference(predictions, proposals)
+            return pred_instances

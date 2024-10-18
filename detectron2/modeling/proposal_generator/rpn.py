@@ -19,6 +19,8 @@ from ..sampling import subsample_labels
 from .build import PROPOSAL_GENERATOR_REGISTRY
 from .proposal_utils import find_top_rpn_proposals
 
+from detectron2.modeling.oodg_loss import oodg_reduce
+
 RPN_HEAD_REGISTRY = Registry("RPN_HEAD")
 RPN_HEAD_REGISTRY.__doc__ = """
 Registry for RPN heads, which take feature maps and perform
@@ -423,6 +425,7 @@ class RPN(nn.Module):
         anchors = self.anchor_generator(features)
 
         pred_objectness_logits, pred_anchor_deltas = self.rpn_head(features)
+        # Each of these still has images in batch as the first dim
         # Transpose the Hi*Wi*A dimension to the middle:
         pred_objectness_logits = [
             # (N, A, Hi, Wi) -> (N, Hi, Wi, A) -> (N, Hi*Wi*A)
@@ -502,3 +505,166 @@ class RPN(nn.Module):
             # Append feature map proposals with shape (N, Hi*Wi*A, B)
             proposals.append(proposals_i.view(N, -1, B))
         return proposals
+
+@PROPOSAL_GENERATOR_REGISTRY.register()
+class OodgRPN(RPN):
+    """
+    Modified RPN class for risk-based OoDG methods. Uses the domain 
+    number (oodg_dataset_numbers) of each image to inform loss calculation.
+
+    """
+    @configurable
+    def __init__(self, *args, **kwargs):
+        """
+        NOTE: this interface is experimental.
+        """
+        super(OodgRPN, self).__init__(*args, **kwargs)
+
+    @classmethod
+    def from_config(cls, cfg, input_shape: Dict[str, ShapeSpec]):
+        return super(OodgRPN, cls).from_config(cfg, input_shape)
+        # Nice, this works
+
+    def forward(
+        self,
+        images: ImageList,
+        features: Dict[str, torch.Tensor],
+        oodg_dataset_numbers: List, # Of the same length as number of images
+        gt_instances: Optional[List[Instances]] = None,
+    ):
+        """
+        Args:
+            images (ImageList): input images of length `N`
+            features (dict[str, Tensor]): input data as a mapping from feature
+                map name to tensor. Axis 0 represents the number of images `N` in
+                the input data; axes 1-3 are channels, height, and width, which may
+                vary between feature maps (e.g., if a feature pyramid is used).
+            oodg_dataset_numbers: domain / dataset number belonging to each image.
+                Has length 'N'. These numbers are propagated to the RPN loss functions.
+            gt_instances (list[Instances], optional): a length `N` list of `Instances`s.
+                Each `Instances` stores ground-truth instances for the corresponding image.
+
+        Returns:
+            proposals: list[Instances]: contains fields "proposal_boxes", "objectness_logits"
+            loss: dict[Tensor] or None
+        """
+        features = [features[f] for f in self.in_features]
+        anchors = self.anchor_generator(features)
+
+        pred_objectness_logits, pred_anchor_deltas = self.rpn_head(features)
+        # Transpose the Hi*Wi*A dimension to the middle:
+        pred_objectness_logits = [
+            # (N, A, Hi, Wi) -> (N, Hi, Wi, A) -> (N, Hi*Wi*A)
+            score.permute(0, 2, 3, 1).flatten(1)
+            for score in pred_objectness_logits
+        ]
+        pred_anchor_deltas = [
+            # (N, A*B, Hi, Wi) -> (N, A, B, Hi, Wi) -> (N, Hi, Wi, A, B) -> (N, Hi*Wi*A, B)
+            x.view(x.shape[0], -1, self.anchor_generator.box_dim, x.shape[-2], x.shape[-1])
+            .permute(0, 3, 4, 1, 2)
+            .flatten(1, -2)
+            for x in pred_anchor_deltas
+        ]
+
+        if self.training:
+            assert gt_instances is not None, "RPN requires gt_instances in training!"
+            gt_labels, gt_boxes = self.label_and_sample_anchors(anchors, gt_instances)
+            # everything is still per-image here
+            losses = self.losses(
+                anchors, pred_objectness_logits, gt_labels, pred_anchor_deltas, gt_boxes, oodg_dataset_numbers
+            )
+        else:
+            losses = {}
+        proposals = self.predict_proposals(
+            anchors, pred_objectness_logits, pred_anchor_deltas, images.image_sizes
+        )
+        return proposals, losses
+        
+    @torch.jit.unused
+    def losses(
+        self,
+        anchors: List[Boxes],
+        pred_objectness_logits: List[torch.Tensor],
+        gt_labels: List[torch.Tensor],
+        pred_anchor_deltas: List[torch.Tensor],
+        gt_boxes: List[torch.Tensor],
+        oodg_dataset_numbers: List,
+    ) -> Dict[str, torch.Tensor]:
+        """
+        Return the losses from a set of RPN predictions and their associated ground-truth.
+        Passes the domain / OoDG dataset number of each detected object instance to the 
+        loss functions, for use in risk-based OoDG methods. 
+        Args:
+            anchors (list[Boxes or RotatedBoxes]): anchors for each feature map, each
+                has shape (Hi*Wi*A, B), where B is box dimension (4 or 5).
+            pred_objectness_logits (list[Tensor]): A list of L elements.
+                Element i is a tensor of shape (N, Hi*Wi*A) representing
+                the predicted objectness logits for all anchors.
+            gt_labels (list[Tensor]): Output of :meth:`label_and_sample_anchors`.
+            pred_anchor_deltas (list[Tensor]): A list of L elements. Element i is a tensor of shape
+                (N, Hi*Wi*A, 4 or 5) representing the predicted "deltas" used to transform anchors
+                to proposals.
+            gt_boxes (list[Tensor]): Output of :meth:`label_and_sample_anchors`.
+            oodg_dataset_numbers (list[int]): Domain / dataset number for each image
+            in batch. 
+
+        Returns:
+            dict[loss name -> loss value]: A dict mapping from loss name to loss value.
+                Loss names are: `loss_rpn_cls` for objectness classification and
+                `loss_rpn_loc` for proposal localization.
+        """
+        num_images = len(gt_labels)
+        gt_labels = torch.stack(gt_labels)  # (N, sum(Hi*Wi*Ai))
+
+        # Log the number of positive/negative anchors per-image that's used in training
+        pos_mask = gt_labels == 1
+
+        # First, multiply the pos_mask with the oodg value of each row/image
+        # Then, we apply the mask again to this, to get a flattened version
+        # Then, we have a 1D tensor that indicates the oodg value for each
+        # anchor. Same as for the roi head.
+
+        oodg_loc_mask = torch.tensor(oodg_dataset_numbers).view(-1,1).to(gt_labels.device) * pos_mask
+        loc_dataset_numbers = oodg_loc_mask[pos_mask] # OoDG dataset number for each positive anchor
+
+        num_pos_anchors = pos_mask.sum().item()
+        num_neg_anchors = (gt_labels == 0).sum().item()
+        storage = get_event_storage()
+        storage.put_scalar("rpn/num_pos_anchors", num_pos_anchors / num_images)
+        storage.put_scalar("rpn/num_neg_anchors", num_neg_anchors / num_images)
+
+        if self.box_reg_loss_type == "smooth_l1":
+            anchors = type(anchors[0]).cat(anchors).tensor  # Ax(4 or 5)
+            gt_anchor_deltas = [self.box2box_transform.get_deltas(anchors, k) for k in gt_boxes]
+            gt_anchor_deltas = torch.stack(gt_anchor_deltas)  # (N, sum(Hi*Wi*Ai), 4 or 5)
+            localization_loss = smooth_l1_loss(
+                cat(pred_anchor_deltas, dim=1)[pos_mask],
+                gt_anchor_deltas[pos_mask],
+                self.smooth_l1_beta,
+                reduction="none",
+            )
+        else:
+            raise NotImplementedError(
+            "Other box regression loss types not implemented yet for OoDG methods.")
+
+        valid_mask = gt_labels >= 0
+        oodg_obj_mask = torch.tensor(oodg_dataset_numbers).view(-1,1).to(gt_labels.device) * valid_mask
+        obj_dataset_numbers = oodg_obj_mask[valid_mask]
+        objectness_loss = F.binary_cross_entropy_with_logits(
+            cat(pred_objectness_logits, dim=1)[valid_mask],
+            gt_labels[valid_mask].to(torch.float32),
+            reduction="none",
+        )
+        normalizer = self.batch_size_per_image * num_images
+
+        # Use the OoDG loss reduction function to weight the losses
+        # for use with risk-based OoDG methods.
+        red_cls_loss, red_box_loss = oodg_reduce(objectness_loss, 
+                                    localization_loss, obj_dataset_numbers, loc_dataset_numbers)
+
+        losses = {
+            "loss_rpn_cls": red_cls_loss / normalizer,
+            "loss_rpn_loc": red_box_loss / normalizer,
+        }
+        losses = {k: v * self.loss_weight.get(k, 1.0) for k, v in losses.items()}
+        return losses

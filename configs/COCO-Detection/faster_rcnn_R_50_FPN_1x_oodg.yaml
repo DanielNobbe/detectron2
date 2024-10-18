@@ -1,0 +1,8 @@
+_BASE_: faster_rcnn_R_50_FPN_1x.yaml
+
+MODEL:
+  META_ARCHITECTURE: "OoDGGeneralizedRCNN"
+  PROPOSAL_GENERATOR:
+    NAME: "OodgRPN"
+  ROI_HEADS:
+      NAME: "OodgROIHeads"

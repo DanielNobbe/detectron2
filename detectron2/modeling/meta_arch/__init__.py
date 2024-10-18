@@ -10,5 +10,7 @@ from .rcnn import GeneralizedRCNN, ProposalNetwork
 from .retinanet import RetinaNet
 from .semantic_seg import SEM_SEG_HEADS_REGISTRY, SemanticSegmentor, build_sem_seg_head
 
+# Added by Daniel
+from .bc_oodg_rcnn import OoDGGeneralizedRCNN
 
 __all__ = list(globals().keys())
